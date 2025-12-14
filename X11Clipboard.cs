@@ -143,7 +143,7 @@ public class X11Clipboard : ResoniteMod
 			{
 				var psi = GetPSI();
 				var mime = MyGetImageMime()!.Value;
-				psi.Arguments = $"-sel clipboard -t {mime} -o";
+				psi.Arguments = $"-sel clipboard -t {mime.OLE} -o";
 				using var p = Process.Start(psi)!;
 				var memstr = new MemoryStream();
 				p.StandardOutput.BaseStream.CopyTo(memstr);
