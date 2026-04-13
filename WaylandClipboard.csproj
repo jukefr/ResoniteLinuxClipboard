@@ -47,7 +47,7 @@
 		</Reference>
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	<ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('$(ResonitePath)/rml_libs/ResoniteHotReloadLib.dll')">
 		<Reference Include="ResoniteHotReloadLib">
 			<HintPath>$(ResonitePath)/rml_libs/ResoniteHotReloadLib.dll</HintPath>
 		</Reference>

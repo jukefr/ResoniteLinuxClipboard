@@ -5,20 +5,20 @@ using System.Diagnostics;
 using ResoniteModLoader;
 using HarmonyLib;
 
-#if DEBUG
+#if DEBUG && RML_HOTRELOAD
 using ResoniteHotReloadLib;
 #endif
 
-namespace X11Clipboard;
+namespace WaylandClipboard;
 
-public class X11Clipboard : ResoniteMod
+public class WaylandClipboard : ResoniteMod
 {
-	public override string Name => "X11Clipboard";
+	public override string Name => "WaylandClipboard";
 	public override string Author => "yosh";
-	public override string Version => typeof(X11Clipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-	public override string Link => "https://git.unix.dog/yosh/ResoniteX11Clipboard/";
+	public override string Version => typeof(WaylandClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+	public override string Link => "https://git.unix.dog/yosh/ResoniteWaylandClipboard/";
 
-	private static Harmony harmony = new Harmony("org.yosh.X11Clipboard");
+	private static Harmony harmony = new Harmony("org.yosh.WaylandClipboard");
 
 	//// CONFIG ////
 
@@ -39,7 +39,7 @@ public class X11Clipboard : ResoniteMod
 
 	public override void OnEngineInit()
 	{
-#if DEBUG
+#if DEBUG && RML_HOTRELOAD
 		HotReloader.RegisterForHotReload(this);
 #endif
 		// config = GetConfiguration();
@@ -53,7 +53,7 @@ public class X11Clipboard : ResoniteMod
 
 	//// RELOAD ////
 
-#if DEBUG
+#if DEBUG && RML_HOTRELOAD
 	static void BeforeHotReload()
 	{
 		harmony.UnpatchAll(harmony.Id);
@@ -70,12 +70,98 @@ public class X11Clipboard : ResoniteMod
 
 	public static class Patch_LinuxClipboardInterface
 	{
-		static ProcessStartInfo GetPSI()
+		private enum ClipboardBackend
 		{
-			var psi = new ProcessStartInfo("xclip");
+			Wayland,
+			X11
+		}
+
+		private static ClipboardBackend? backend;
+
+		private static ClipboardBackend Backend
+		{
+			get
+			{
+				if (backend.HasValue)
+					return backend.Value;
+
+				if (CommandExists("wl-copy") && CommandExists("wl-paste"))
+				{
+					backend = ClipboardBackend.Wayland;
+					Msg("Using Wayland clipboard backend (wl-copy/wl-paste).");
+				}
+				else
+				{
+					backend = ClipboardBackend.X11;
+					Msg("Using X11 clipboard backend (xclip).");
+				}
+
+				return backend.Value;
+			}
+		}
+
+		private static void Msg(string message) => Error($"[{nameof(WaylandClipboard)}] {message}");
+
+		private static bool CommandExists(string command)
+		{
+			try
+			{
+				var psi = new ProcessStartInfo(command, "--version");
+				psi.RedirectStandardError = true;
+				psi.RedirectStandardOutput = true;
+				psi.UseShellExecute = false;
+				using var p = Process.Start(psi);
+				if (p == null)
+					return false;
+
+				p.WaitForExit(1000);
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		static ProcessStartInfo GetReadPSI(string mimeType = "")
+		{
+			ProcessStartInfo psi;
+			if (Backend == ClipboardBackend.Wayland)
+			{
+				var args = string.IsNullOrEmpty(mimeType) ? "-n" : $"--type {mimeType} -n";
+				psi = new ProcessStartInfo("wl-paste", args);
+			}
+			else
+			{
+				var args = string.IsNullOrEmpty(mimeType) ? "-sel clipboard -o" : $"-sel clipboard -t {mimeType} -o";
+				psi = new ProcessStartInfo("xclip", args);
+			}
+
 			psi.RedirectStandardError = true;
 			psi.RedirectStandardOutput = true;
 			psi.RedirectStandardInput = true;
+			psi.UseShellExecute = false;
+			return psi;
+		}
+
+		static ProcessStartInfo GetWritePSI(string mimeType = "")
+		{
+			ProcessStartInfo psi;
+			if (Backend == ClipboardBackend.Wayland)
+			{
+				var args = string.IsNullOrEmpty(mimeType) ? "" : $"--type {mimeType}";
+				psi = new ProcessStartInfo("wl-copy", args);
+			}
+			else
+			{
+				var args = string.IsNullOrEmpty(mimeType) ? "-sel clipboard" : $"-sel clipboard -t {mimeType} -i";
+				psi = new ProcessStartInfo("xclip", args);
+			}
+
+			psi.RedirectStandardError = true;
+			psi.RedirectStandardOutput = true;
+			psi.RedirectStandardInput = true;
+			psi.UseShellExecute = false;
 			return psi;
 		}
 
@@ -90,8 +176,17 @@ public class X11Clipboard : ResoniteMod
 
 		static string[] GetClipboardMimes()
 		{
-			var psi = GetPSI();
-			psi.Arguments = "-sel clipboard -t TARGETS -o";
+			ProcessStartInfo psi;
+			if (Backend == ClipboardBackend.Wayland)
+				psi = new ProcessStartInfo("wl-paste", "-l");
+			else
+				psi = new ProcessStartInfo("xclip", "-sel clipboard -t TARGETS -o");
+
+			psi.RedirectStandardError = true;
+			psi.RedirectStandardOutput = true;
+			psi.RedirectStandardInput = true;
+			psi.UseShellExecute = false;
+
 			using var p = Process.Start(psi)!;
 			var ret = p.StandardOutput.ReadToEnd()
 				.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -105,8 +200,7 @@ public class X11Clipboard : ResoniteMod
 		{
 			static bool Prefix(ref Task<string> __result)
 			{
-				var psi = GetPSI();
-				psi.Arguments = "-sel clipboard -o";
+				var psi = GetReadPSI();
 				using var p = Process.Start(psi)!;
 				__result = p.StandardOutput.ReadToEndAsync();
 				return false;
@@ -129,9 +223,7 @@ public class X11Clipboard : ResoniteMod
 			static bool Prefix(ref bool __result, string mime_type)
 			{
 				var mimes = GetClipboardMimes();
-				__result = mimes
-					.Where(f => mimes.Contains(mime_type))
-					.Any();
+				__result = mimes.Contains(mime_type);
 				return false;
 			}
 		}
@@ -141,9 +233,15 @@ public class X11Clipboard : ResoniteMod
 		{
 			static bool Prefix(ref Task<Bitmap2D> __result)
 			{
-				var psi = GetPSI();
-				var mime = MyGetImageMime()!.Value;
-				psi.Arguments = $"-sel clipboard -t {mime.OLE} -o";
+				var imageMime = MyGetImageMime();
+				if (!imageMime.HasValue)
+				{
+					__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No image format available on clipboard"));
+					return false;
+				}
+
+				var mime = imageMime.Value;
+				var psi = GetReadPSI(mime.OLE);
 				using var p = Process.Start(psi)!;
 				var memstr = new MemoryStream();
 				p.StandardOutput.BaseStream.CopyTo(memstr);
@@ -164,10 +262,10 @@ public class X11Clipboard : ResoniteMod
 		{
 			static bool Prefix(ref Task<bool> __result, string text)
 			{
-				var psi = GetPSI();
-				psi.Arguments = $"-sel clipboard";
+				var psi = GetWritePSI();
 				using var p = Process.Start(psi)!;
 				p.StandardInput.Write(text);
+				p.StandardInput.Close();
 
 				__result =  Task.FromResult(result: true);
 				return false;
@@ -179,13 +277,14 @@ public class X11Clipboard : ResoniteMod
 		{
 			static bool Prefix(ref Task<bool> __result, Bitmap2D bitmap)
 			{
-				var psi = GetPSI();
-				psi.Arguments = $"-sel clipboard -t image/png -i";
+				var psi = GetWritePSI("image/png");
 				using var p = Process.Start(psi)!;
 
 				using MemoryStream ms = new MemoryStream();
 				bitmap.Save(ms, "png");
-				p.StandardInput.BaseStream.Write(new ReadOnlySpan<byte>(ms.ToArray()));
+				var bytes = ms.ToArray();
+				p.StandardInput.BaseStream.Write(bytes, 0, bytes.Length);
+				p.StandardInput.Close();
 
 				__result = Task.FromResult(result: true);
 				return false;
