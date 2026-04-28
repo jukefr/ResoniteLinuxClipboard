@@ -1,12 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Elements.Assets {
     public class CommonClipboard {
         public struct ImageFormat {
-            public string OLE { get; }
-            public string Extension { get; }
-            public string MimeType { get; }
+            public string OLE { get; set; }
+            public string Extension { get; set; }
+            public string MimeType { get; set; }
         }
 
         public static ImageFormat[] ImageFormats { get; } = Array.Empty<ImageFormat>();

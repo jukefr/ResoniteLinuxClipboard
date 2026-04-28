@@ -4,4 +4,10 @@
     <OutputType>Library</OutputType>
     <AssemblyName>Renderite.Host</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Elements.Assets">
+      <HintPath>../prebuilt/Elements.Assets.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

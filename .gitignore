@@ -1,3 +1,6 @@
 bin/
 obj/
 stubs/output/
+stubs/prebuilt/**/*.deps.json
+stubs/prebuilt/**/*.pdb
+!stubs/prebuilt/**/*.dll
