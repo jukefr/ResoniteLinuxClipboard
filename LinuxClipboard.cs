@@ -130,12 +130,12 @@ public class LinuxClipboard : ResoniteMod
 			return psi;
 		}
 
-		static CommonClipboard.ImageFormat? MyGetImageMime()
+		static Renderite.Host.ImageFormat? MyGetImageMime()
 		{
 			var mimes = GetClipboardMimes();
 			return CommonClipboard.ImageFormats
 				.Where(f => mimes.Contains(f.OLE))
-				.Select(f => new Nullable<CommonClipboard.ImageFormat>(f))
+				.Select(f => new Nullable<Renderite.Host.ImageFormat>(f))
 				.FirstOrDefault();
 		}
 
@@ -222,7 +222,7 @@ public class LinuxClipboard : ResoniteMod
 		[HarmonyPatch(typeof(LinuxClipboardInterface), "GetImageMime")]
 		public static class Patch_GetImageMime
 		{
-			static bool Prefix(ref CommonClipboard.ImageFormat? __result)
+			static bool Prefix(ref Renderite.Host.ImageFormat? __result)
 			{
 				try
 				{
