@@ -130,13 +130,29 @@ public class LinuxClipboard : ResoniteMod
 			return psi;
 		}
 
-		static CommonClipboard.ImageFormat? MyGetImageMime()
+		static Renderite.Host.CommonClipboard.ImageFormat? MyGetImageMime()
 		{
 			var mimes = GetClipboardMimes();
-			return CommonClipboard.ImageFormats
+			var format = Renderite.Host.CommonClipboard.ImageFormats
 				.Where(f => mimes.Contains(f.OLE))
-				.Select(f => new Nullable<CommonClipboard.ImageFormat>(f))
 				.FirstOrDefault();
+			// Check if it's the default value (no match) - OLE will be null for default
+			if (format.OLE == null)
+				return null;
+			return format;
+		}
+
+		static string GetExtensionFromMime(string mime)
+		{
+			return mime switch
+			{
+				"image/png" => "png",
+				"image/jpeg" => "jpg",
+				"image/gif" => "gif",
+				"image/bmp" => "bmp",
+				"image/tiff" => "tiff",
+				_ => "png" // default to PNG
+			};
 		}
 
 		static string[] GetClipboardMimes()
@@ -222,11 +238,19 @@ public class LinuxClipboard : ResoniteMod
 		[HarmonyPatch(typeof(LinuxClipboardInterface), "GetImageMime")]
 		public static class Patch_GetImageMime
 		{
-			static bool Prefix(ref CommonClipboard.ImageFormat? __result)
+			static bool Prefix(ref Renderite.Host.CommonClipboard.ImageFormat? __result)
 			{
 				try
 				{
-					__result = MyGetImageMime();
+					var mime = MyGetImageMime();
+					if (mime == null)
+					{
+						__result = null;
+					}
+					else
+					{
+						__result = mime;
+					}
 				}
 				catch (Exception ex)
 				{
@@ -276,7 +300,7 @@ public class LinuxClipboard : ResoniteMod
 					}
 
 					var imageMime = MyGetImageMime();
-					if (!imageMime.HasValue)
+					if (imageMime == null)
 					{
 						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No image format available on clipboard"));
 						return false;

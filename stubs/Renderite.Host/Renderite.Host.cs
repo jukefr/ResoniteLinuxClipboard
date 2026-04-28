@@ -2,9 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Elements.Assets;
+
+// Reference Bitmap2D from Elements.Assets.dll
+using Bitmap2D = Elements.Assets.Bitmap2D;
 
 namespace Renderite.Host {
+    // CommonClipboard with ImageFormat is defined in Renderite.Host.dll in the real game
+    public static class CommonClipboard {
+        public readonly struct ImageFormat {
+            public readonly string OLE;
+            public readonly string Extension;
+            public readonly string MimeType;
+            
+            public ImageFormat(string ole, string extension) {
+                OLE = ole;
+                Extension = extension;
+                MimeType = ole;
+            }
+        }
+        
+        public static readonly ImageFormat[] ImageFormats = new ImageFormat[0];
+    }
+
     public interface IClipboardInterface {
         bool ContainsText { get; }
         bool ContainsFiles { get; }
@@ -20,6 +39,9 @@ namespace Renderite.Host {
         public bool ContainsText => true;
         public bool ContainsFiles => false;
         public bool ContainsImage => false;
+        
+        public System.Nullable<CommonClipboard.ImageFormat> GetImageMime() => null;
+        
         public void Dispose() { }
         public Task<List<string>> GetFiles() => Task.FromResult(new List<string>());
         public Task<Bitmap2D> GetImage() => Task.FromResult<Bitmap2D>(null);
