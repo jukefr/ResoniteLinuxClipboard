@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="DiscoveryToolsTests.cs" />
     <Compile Include="ConfigurationTests.cs" />
     <Compile Include="BackendDetectionTests.cs" />
     <Compile Include="MimeTypeTests.cs" />

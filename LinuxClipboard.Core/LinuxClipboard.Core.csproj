@@ -10,7 +10,6 @@
 	<ItemGroup>
 		<Compile Include="BackendDetector.cs" />
 		<Compile Include="IProcessRunner.cs" />
-		<Compile Include="Patch_LinuxClipboardInterface.cs" />
 	</ItemGroup>
 
 </Project>

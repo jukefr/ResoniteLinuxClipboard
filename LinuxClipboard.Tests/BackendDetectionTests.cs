@@ -22,18 +22,14 @@ public class BackendDetectionTests
         Assert.Equal(BackendDetector.ClipboardBackend.None, result);
     }
 
-    [Fact(Skip = "Mock setup issues with Process - needs more work")]
+    [Fact]
     public void CommandExists_WhenProcessStarts_ReturnsTrue()
     {
-        // Arrange
-        var mockRunner = Substitute.For<IProcessRunner>();
-        var mockProcess = Substitute.For<Process>();
-        mockRunner.Start(Arg.Any<ProcessStartInfo>()).Returns(mockProcess);
+        // Arrange - use real DefaultProcessRunner with a command that always exists
+        var detector = new BackendDetector();
 
-        var detector = new BackendDetector(mockRunner);
-
-        // Act
-        var result = detector.CommandExists("test-command");
+        // Act - "true" is a standard Linux command that exits immediately
+        var result = detector.CommandExists("true");
 
         // Assert
         Assert.True(result);
