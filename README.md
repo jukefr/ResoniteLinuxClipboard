@@ -14,7 +14,6 @@ A [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoade
 - **Image clipboard**: Copy/paste images (PNG format)
 - **Configurable**: Mod configuration options via ResoniteModLoader
 - **Error handling**: Robust error handling with timeouts for all clipboard operations
-- **Discovery mode**: Optional debugging mode to scan for inspector/font candidates (disabled by default)
 
 ## Backends
 
@@ -53,7 +52,6 @@ The mod supports the following configuration options (via ResoniteModLoader's co
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `EnableDiscovery` | `bool` | `false` | Enable discovery mode for debugging (logs inspector/font candidates) |
 | `ClipboardTimeoutMs` | `int` | `5000` | Timeout in milliseconds for clipboard operations (0 = no timeout) |
 
 To configure, use ResoniteModLoader's configuration interface in-game.
@@ -83,29 +81,16 @@ The project includes comprehensive unit tests for core logic.
 
 ```
 ResoniteLinuxClipboard/
-├── LinuxClipboard.Core/          # Pure logic (testable, no Resonite dependencies)
-│   ├── DiscoveryTools.cs       # Keyword matching, type scoring
-│   ├── BackendDetector.cs     # Backend detection logic
-│   └── IProcessRunner.cs      # Interface for mocking Process.Start`
-├── LinuxClipboard.Tests/       # xUnit test project`
-│   ├── DiscoveryToolsTests.cs  # Tests for keyword matching, scoring`
-│   └── BackendDetectionTests.cs # Tests for backend detection`
-└── LinuxClipboard.cs           # Main mod class`
+├── LinuxClipboard.Core/          # Pure logic (no Resonite dependencies)
+│   ├── BackendDetector.cs        # Backend detection logic
+│   └── IProcessRunner.cs         # Interface for mocking Process.Start
+├── LinuxClipboard.Tests/        # xUnit test project
+│   ├── BackendDetectionTests.cs  # Tests for backend detection
+│   ├── ConfigurationTests.cs    # (placeholder - needs ResoniteModLoader)
+│   ├── MimeTypeTests.cs        # (placeholder - needs refactoring)
+│   └── InputValidationTests.cs  # (placeholder - needs ResoniteModLoader)
+└── LinuxClipboard.cs           # Main mod class
 ```
-
-### Running Tests
-
-```bash
-# Run all tests`
-dotnet test LinuxClipboard.Tests/LinuxClipboard.Tests.csproj`
-
-# Run specific test category`
-dotnet test LinuxClipboard.Tests/LinuxClipboard.Tests.csproj --filter "FullyQualifiedName~DiscoveryTools"`
-```
-
-**Current test status**: 24 tests passing (18 DiscoveryTools + 3 BackendDetection + 3 placeholder)
-
-Note: Some tests (Configuration, InputValidation, MimeType) require ResoniteModLoader.dll and cannot be run without the Resonite environment.
 
 ## Hot Reload (Development)
 
@@ -122,21 +107,19 @@ dotnet build -p:DefineConstants="DEBUG;RML_HOTRELOAD"`
 ```
 ResoniteLinuxClipboard/
 ├── LinuxClipboard.Core/          # Core library (no Resonite dependencies)
-│   ├── DiscoveryTools.cs`
-│   ├── BackendDetector.cs`
-│   └── IProcessRunner.cs`
-├── LinuxClipboard.Tests/       # Test project`
-│   ├── DiscoveryToolsTests.cs`
-│   ├── BackendDetectionTests.cs`
-│   ├── ConfigurationTests.cs    # (placeholder - needs ResoniteModLoader)`
-│   ├── MimeTypeTests.cs        # (placeholder - needs refactoring)`
-│   └── InputValidationTests.cs  # (placeholder - needs ResoniteModLoader)`
-├── LinuxClipboard.cs           # Main mod class`
-├── LinuxClipboard.Core.csproj    # Core project file`
-├── LinuxClipboard.Tests.csproj  # Test project file`
-├── LinuxClipboard.csproj         # Main project file`
-├── README.md`
-└── LICENSE                   # GNU GPL-3.0`
+│   ├── BackendDetector.cs
+│   └── IProcessRunner.cs
+├── LinuxClipboard.Tests/        # xUnit test project
+│   ├── BackendDetectionTests.cs
+│   ├── ConfigurationTests.cs   # (placeholder - needs ResoniteModLoader)
+│   ├── MimeTypeTests.cs       # (placeholder - needs refactoring)
+│   └── InputValidationTests.cs # (placeholder - needs ResoniteModLoader)
+├── LinuxClipboard.cs          # Main mod class
+├── LinuxClipboard.Core.csproj   # Core project file
+├── LinuxClipboard.Tests.csproj # Test project file
+├── LinuxClipboard.csproj        # Main project file
+├── README.md
+└── LICENSE                  # GNU GPL-3.0
 ```
 
 ## Improvements Made

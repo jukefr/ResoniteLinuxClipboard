@@ -7,10 +7,10 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="DiscoveryTools.cs" />
-    <Compile Include="IProcessRunner.cs" />
-    <Compile Include="BackendDetector.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Include="BackendDetector.cs" />
+		<Compile Include="IProcessRunner.cs" />
+		<Compile Include="Patch_LinuxClipboardInterface.cs" />
+	</ItemGroup>
 
 </Project>

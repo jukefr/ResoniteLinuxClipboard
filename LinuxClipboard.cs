@@ -23,19 +23,11 @@ public class LinuxClipboard : ResoniteMod
 	public override string Link => "https://github.com/jukefr/ResoniteLinuxClipboard/";
 
 	private static readonly Harmony harmony = new Harmony("com.github.jukefr.ResoniteLinuxClipboard");
-	private static bool discoveryStarted;
 	private static BackendDetector? backendDetector;
 
 	//// CONFIG ////
 
 	internal static ModConfiguration? config;
-
-	[AutoRegisterConfigKey]
-	internal static readonly ModConfigurationKey<bool> KEnableDiscovery = new(
-		"EnableDiscovery",
-		"Enable discovery mode for debugging (logs inspector/font candidates)",
-		computeDefault: () => false
-	);
 
 	[AutoRegisterConfigKey]
 	internal static readonly ModConfigurationKey<int> KClipboardTimeoutMs = new(
@@ -45,7 +37,6 @@ public class LinuxClipboard : ResoniteMod
 		valueValidator: (v) => v >= 0
 	);
 
-	internal static bool EnableDiscovery => config?.GetValue(KEnableDiscovery) ?? false;
 	internal static int ClipboardTimeoutMs => config?.GetValue(KClipboardTimeoutMs) ?? 5000;
 
 	//// INIT ////
@@ -62,20 +53,6 @@ public class LinuxClipboard : ResoniteMod
 	public static void InitMod()
 	{
 		harmony.PatchAll();
-		backendDetector = new BackendDetector();
-		if (EnableDiscovery)
-			StartDiscoveryMode();
-	}
-
-	private static void StartDiscoveryMode()
-	{
-		if (discoveryStarted)
-			return;
-
-		discoveryStarted = true;
-		Info($"[{nameof(LinuxClipboard)}] Discovery mode enabled: scanning for inspector/font candidates.");
-		DumpCandidates();
-		PatchRuntimeProbes(harmony);
 	}
 
 	//// RELOAD ////
@@ -97,130 +74,6 @@ public class LinuxClipboard : ResoniteMod
 	private static void Info(string message) => Msg($"[{nameof(LinuxClipboard)}] {message}");
 	private static void Warn(string message) => Msg($"[{nameof(LinuxClipboard)}] {message}");
 	private static void ErrorMsg(string message) => Error($"[{nameof(LinuxClipboard)}] {message}");
-
-	private static readonly HashSet<string> LoggedRuntimeMethods = new HashSet<string>();
-
-	private static void DumpCandidates()
-	{
-		foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(DiscoveryTools.IsInterestingAssembly))
-		{
-			Type[] types;
-			try
-			{
-				types = asm.GetTypes();
-			}
-			catch (ReflectionTypeLoadException rtl)
-			{
-				types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
-			}
-			catch (Exception ex)
-			{
-				Warn($"[{nameof(LinuxClipboard)}] Discovery scan failed for assembly '{asm.GetName().Name}': {ex.Message}");
-				continue;
-			}
-
-			foreach (var type in types)
-			{
-				var score = DiscoveryTools.ScoreType(type);
-				if (score <= 0)
-					continue;
-
-				var methods = type
-					.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-					.Where(m => DiscoveryTools.ScoreMethod(m) > 0)
-					.Take(8)
-					.Select(m => m.Name)
-					.Distinct()
-					.ToArray();
-
-				Info($"[{nameof(LinuxClipboard)}] Candidate[{score}] {type.FullName} :: {string.Join(", ", methods)}");
-			}
-		}
-	}
-
-	private static void PatchRuntimeProbes(Harmony patcher)
-	{
-		var targetMethods = EnumerateRuntimeProbeMethods().ToArray();
-		var postfix = new HarmonyMethod(typeof(LinuxClipboard), nameof(RuntimeProbePostfix));
-		var patchedCount = 0;
-
-		foreach (var method in targetMethods)
-		{
-			try
-			{
-				patcher.Patch(method, postfix: postfix);
-				patchedCount++;
-			}
-			catch (Exception ex)
-			{
-				Warn($"[{nameof(LinuxClipboard)}] Failed to patch probe method {method.DeclaringType?.FullName}.{method.Name}: {ex.Message}");
-			}
-		}
-
-		Info($"[{nameof(LinuxClipboard)}] Runtime probes attached: {patchedCount} methods.");
-	}
-
-	private static void RuntimeProbePostfix(MethodBase __originalMethod)
-	{
-		if (__originalMethod == null)
-			return;
-
-		var key = $"{__originalMethod.DeclaringType?.FullName}.{__originalMethod.Name}";
-		if (!LoggedRuntimeMethods.Add(key))
-			return;
-
-		Info($"[{nameof(LinuxClipboard)}] Runtime hit: {key}");
-	}
-
-	private static IEnumerable<MethodBase> EnumerateRuntimeProbeMethods()
-	{
-		foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(DiscoveryTools.IsInterestingAssembly))
-		{
-			Type[] types;
-			try
-			{
-				types = asm.GetTypes();
-			}
-			catch (ReflectionTypeLoadException rtl)
-			{
-				types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
-			}
-			catch
-			{
-				continue;
-			}
-
-			foreach (var type in types)
-			{
-				if (DiscoveryTools.ScoreType(type) <= 0)
-					continue;
-
-				MethodInfo[] methods;
-				try
-				{
-					methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-				}
-				catch
-				{
-					continue;
-				}
-
-				foreach (var method in methods)
-				{
-					if (method.IsAbstract || method.ContainsGenericParameters)
-						continue;
-					if (method.IsSpecialName)
-						continue;
-					if (method.GetMethodBody() == null)
-						continue;
-					if (DiscoveryTools.ScoreMethod(method) <= 0)
-						continue;
-
-					yield return method;
-				}
-			}
-		}
-	}
 
 	public static class Patch_LinuxClipboardInterface
 	{

@@ -15,18 +15,6 @@ public class Patch_LinuxClipboardInterface
     private static IProcessRunner? processRunner;
 
     internal static void SetProcessRunner(IProcessRunner runner) => processRunner = runner;
-
-    internal static ClipboardBackend Backend
-    {
-        get
-        {
-            if (backend.HasValue)
-                return backend.Value;
-
-            if (CommandExists("wl-copy") && CommandExists("wl-paste"))
-            {
-                backend = ClipboardBackend.Linux;
-            }
             else if (CommandExists("xclip"))
             {
                 backend = ClipboardBackend.X11;
