@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<Version>1.0.1</Version>
-		<Authors>yosh</Authors>
+		<Authors>jukefr</Authors>
 		<OutputType>Library</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>

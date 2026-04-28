@@ -18,11 +18,11 @@ namespace LinuxClipboard;
 public class LinuxClipboard : ResoniteMod
 {
 	public override string Name => "LinuxClipboard";
-	public override string Author => "yosh";
+	public override string Author => "jukefr";
 	public override string Version => typeof(LinuxClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 	public override string Link => "https://github.com/jukefr/ResoniteLinuxClipboard/";
 
-	private static readonly Harmony harmony = new Harmony("org.yosh.LinuxClipboard");
+	private static readonly Harmony harmony = new Harmony("org.jukefr.LinuxClipboard");
 	private static bool discoveryStarted;
 	private static BackendDetector? backendDetector;
 
