@@ -10,9 +10,9 @@ namespace Renderite.Host {
     // CommonClipboard with ImageFormat is defined in Renderite.Host.dll in the real game
     public static class CommonClipboard {
         public readonly struct ImageFormat {
-            public string OLE { get; }
-            public string Extension { get; }
-            public string MimeType { get; }
+            public readonly string OLE;
+            public readonly string Extension;
+            public readonly string MimeType;
             
             public ImageFormat(string ole, string extension) {
                 OLE = ole;
@@ -21,7 +21,6 @@ namespace Renderite.Host {
             }
         }
         
-        // This is a PUBLIC STATIC READONLY FIELD in the real game, not a property!
         public static readonly ImageFormat[] ImageFormats = new ImageFormat[0];
     }
 
@@ -41,7 +40,6 @@ namespace Renderite.Host {
         public bool ContainsFiles => false;
         public bool ContainsImage => false;
         
-        // This method exists in the real game and returns Nullable<ImageFormat>
         public System.Nullable<CommonClipboard.ImageFormat> GetImageMime() => null;
         
         public void Dispose() { }
