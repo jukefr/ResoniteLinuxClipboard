@@ -55,7 +55,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" Private="false" />
+		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
