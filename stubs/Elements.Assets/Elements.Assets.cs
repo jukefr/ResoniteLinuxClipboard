@@ -3,13 +3,13 @@ using System.IO;
 
 namespace Elements.Assets {
     public class CommonClipboard {
-        public class ImageFormat {
-            public ImageFormat OLE { get; }
-            public ImageFormat Extension { get; }
-            public string MimeType { get; }
+        public enum ImageFormat {
+            OLE,
+            Extension
         }
 
         public ImageFormat ImageFormats { get; }
+        public string MimeType { get; }
     }
 
     public class Bitmap2D {
