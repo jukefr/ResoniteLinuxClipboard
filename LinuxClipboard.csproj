@@ -11,12 +11,9 @@
 		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 	</PropertyGroup>
 
-	<!-- ResonitePath is optional for CI/build: if it isn't provided, we will populate it with
-	     stub output from the BuildStubs target above. -->
+	<!-- ResonitePath is only needed for the local Copy target into Resonite/rml_mods. -->
 	<PropertyGroup Condition="'$(ResonitePath)' == ''">
-		<!-- default windows and linux paths, manual fallback if both don't turn up anything -->
 		<ResonitePath Condition="'$(OS)' == 'Windows_NT' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite')">C:/Program Files (x86)/Steam/steamapps/common/Resonite</ResonitePath>
-
 		<ResonitePath Condition="'$(OS)' != 'Windows_NT' and Exists('$(HOME)/.steam/steam/steamapps/common/Resonite')">$(HOME)/.steam/steam/steamapps/common/Resonite</ResonitePath>
 	</PropertyGroup>
 
@@ -25,25 +22,32 @@
 		<ManagedPath>$(ResonitePath)</ManagedPath>
 	</PropertyGroup>
 
+	<!--
+	  References
+	  - Build stubs (Elements.Assets, Renderite.Host) locally into stubs/prebuilt
+	  - Use downloaded open-source DLLs for ResoniteModLoader + HarmonyLib
+	  - Avoid ResonitePath-derived HintPaths entirely
+	-->
 	<ItemGroup>
-		<ResoniteReference Include="Elements.Assets"/>
-		<ResoniteReference Include="Renderite.Host"/>
-			
+		<Reference Include="Elements.Assets">
+			<HintPath>$(MSBuildProjectDirectory)/stubs/prebuilt/Elements.Assets.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Renderite.Host">
+			<HintPath>$(MSBuildProjectDirectory)/stubs/prebuilt/Renderite.Host.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
 		<Reference Include="ResoniteModLoader">
-			<HintPath>$(ResonitePath)/Libraries/ResoniteModLoader.dll</HintPath>
+			<HintPath>$(MSBuildProjectDirectory)/stubs/prebuilt/Libraries/ResoniteModLoader.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="HarmonyLib">
-			<HintPath>$(ResonitePath)/rml_libs/0Harmony.dll</HintPath>
+			<HintPath>$(MSBuildProjectDirectory)/stubs/prebuilt/rml_libs/0Harmony.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
 
-	<!--
-	  CI friendliness:
-	  Ensure stub assemblies exist so the action can run just `dotnet build LinuxClipboard.csproj`.
-	  This avoids relying on downloaded/prebuilt stub artifacts.
-	-->
+	<!-- Build required stub assemblies into stubs/prebuilt -->
 	<Target Name="BuildStubs" BeforeTargets="PrepareForBuild">
 		<!--
 		  Build required stub assemblies into stubs/prebuilt so the rest of this project
@@ -51,32 +55,13 @@
 		-->
 		<PropertyGroup>
 			<_StubOutDir>$(MSBuildProjectDirectory)/stubs/prebuilt</_StubOutDir>
-			<!-- Make ResonitePath point at our stub output so HintPaths resolve. -->
-			<ResonitePath Condition="'$(ResonitePath)' == ''">$(_StubOutDir)</ResonitePath>
 		</PropertyGroup>
 		<MakeDir Directories="$(_StubOutDir)" />
+		<MakeDir Directories="$(_StubOutDir)/Libraries" />
+		<MakeDir Directories="$(_StubOutDir)/rml_libs" />
 		<Exec Command='dotnet build "stubs/Elements.Assets/Elements.Assets.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
 		<Exec Command='dotnet build "stubs/Renderite.Host/Renderite.Host.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
 	</Target>
-
-	<ItemGroup>
-		<Reference Include="@(ResoniteReference)">
-			<Name>%(ResoniteReference.Identity)</Name>
-			<!-- For CI (and general determinism), prefer the locally built stub assemblies. -->
-			<HintPath Condition="'%(HintPath)' == '' And Exists('$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).dll')">$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).dll</HintPath>
-			<HintPath Condition="'%(HintPath)' == '' And Exists('$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).exe')">$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).exe</HintPath>
-			<!-- Fallback to real Resonite managed binaries when ResonitePath is present. -->
-			<HintPath Condition="'%(HintPath)' == '' And Exists('$(ManagedPath)/%(Identity).dll')">$(ManagedPath)/%(Identity).dll</HintPath>
-			<HintPath Condition="'%(HintPath)' == '' And Exists('$(ManagedPath)/%(Identity).exe')">$(ManagedPath)/%(Identity).exe</HintPath>
-			<Private>false</Private>
-		</Reference>
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('$(ResonitePath)/rml_libs/ResoniteHotReloadLib.dll')">
-		<Reference Include="ResoniteHotReloadLib">
-			<HintPath>$(ResonitePath)/rml_libs/ResoniteHotReloadLib.dll</HintPath>
-		</Reference>
-	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
