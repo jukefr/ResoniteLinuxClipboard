@@ -2,6 +2,7 @@ using Elements.Assets;
 using Renderite.Host;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using ResoniteModLoader;
 using HarmonyLib;
@@ -9,6 +10,8 @@ using HarmonyLib;
 #if DEBUG && RML_HOTRELOAD
 using ResoniteHotReloadLib;
 #endif
+
+[assembly: InternalsVisibleTo("WaylandClipboard.Tests")]
 
 namespace WaylandClipboard;
 
@@ -19,8 +22,9 @@ public class WaylandClipboard : ResoniteMod
 	public override string Version => typeof(WaylandClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 	public override string Link => "https://git.unix.dog/yosh/ResoniteWaylandClipboard/";
 
-		private static readonly Harmony harmony = new Harmony("org.yosh.WaylandClipboard");
-		private static bool discoveryStarted;
+	private static readonly Harmony harmony = new Harmony("org.yosh.WaylandClipboard");
+	private static bool discoveryStarted;
+	private static BackendDetector? backendDetector;
 
 	//// CONFIG ////
 
@@ -58,6 +62,7 @@ public class WaylandClipboard : ResoniteMod
 	public static void InitMod()
 	{
 		harmony.PatchAll();
+		backendDetector = new BackendDetector();
 		if (EnableDiscovery)
 			StartDiscoveryMode();
 	}
@@ -69,8 +74,8 @@ public class WaylandClipboard : ResoniteMod
 
 		discoveryStarted = true;
 		Info($"[{nameof(WaylandClipboard)}] Discovery mode enabled: scanning for inspector/font candidates.");
-		DiscoveryTools.DumpCandidates();
-		DiscoveryTools.PatchRuntimeProbes(harmony);
+		DumpCandidates();
+		PatchRuntimeProbes(harmony);
 	}
 
 	//// RELOAD ////
@@ -93,258 +98,143 @@ public class WaylandClipboard : ResoniteMod
 	private static void Warn(string message) => Msg($"[{nameof(WaylandClipboard)}] {message}");
 	private static void ErrorMsg(string message) => Error($"[{nameof(WaylandClipboard)}] {message}");
 
-	public static class DiscoveryTools
+	private static readonly HashSet<string> LoggedRuntimeMethods = new HashSet<string>();
+
+	private static void DumpCandidates()
 	{
-		private static readonly string[] AssemblyPrefixes =
+		foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(DiscoveryTools.IsInterestingAssembly))
 		{
-			"FrooxEngine",
-			"Elements."
-		};
-
-		private static readonly string[] Keywords =
-		{
-			"Inspector",
-			"Font",
-			"FontChain",
-			"Text",
-			"Style",
-			"Theme",
-			"Label"
-		};
-
-		private static readonly HashSet<string> LoggedRuntimeMethods = new HashSet<string>();
-
-		public static void DumpCandidates()
-		{
-			foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(IsInterestingAssembly))
+			Type[] types;
+			try
 			{
-				Type[] types;
-				try
-				{
-					types = asm.GetTypes();
-				}
-				catch (ReflectionTypeLoadException rtl)
-				{
-					types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
-				}
-				catch (Exception ex)
-				{
-					Warn($"[{nameof(WaylandClipboard)}] Discovery scan failed for assembly '{asm.GetName().Name}': {ex.Message}");
+				types = asm.GetTypes();
+			}
+			catch (ReflectionTypeLoadException rtl)
+			{
+				types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
+			}
+			catch (Exception ex)
+			{
+				Warn($"[{nameof(WaylandClipboard)}] Discovery scan failed for assembly '{asm.GetName().Name}': {ex.Message}");
+				continue;
+			}
+
+			foreach (var type in types)
+			{
+				var score = DiscoveryTools.ScoreType(type);
+				if (score <= 0)
 					continue;
-				}
 
-				foreach (var type in types)
-				{
-					var score = ScoreType(type);
-					if (score <= 0)
-						continue;
+				var methods = type
+					.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+					.Where(m => DiscoveryTools.ScoreMethod(m) > 0)
+					.Take(8)
+					.Select(m => m.Name)
+					.Distinct()
+					.ToArray();
 
-					var methods = type
-						.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-						.Where(m => ScoreMethod(m) > 0)
-						.Take(8)
-						.Select(m => m.Name)
-						.Distinct()
-						.ToArray();
+				Info($"[{nameof(WaylandClipboard)}] Candidate[{score}] {type.FullName} :: {string.Join(", ", methods)}");
+			}
+		}
+	}
 
-					Info($"[{nameof(WaylandClipboard)}] Candidate[{score}] {type.FullName} :: {string.Join(", ", methods)}");
-				}
+	private static void PatchRuntimeProbes(Harmony patcher)
+	{
+		var targetMethods = EnumerateRuntimeProbeMethods().ToArray();
+		var postfix = new HarmonyMethod(typeof(WaylandClipboard), nameof(RuntimeProbePostfix));
+		var patchedCount = 0;
+
+		foreach (var method in targetMethods)
+		{
+			try
+			{
+				patcher.Patch(method, postfix: postfix);
+				patchedCount++;
+			}
+			catch (Exception ex)
+			{
+				Warn($"[{nameof(WaylandClipboard)}] Failed to patch probe method {method.DeclaringType?.FullName}.{method.Name}: {ex.Message}");
 			}
 		}
 
-		public static void PatchRuntimeProbes(Harmony patcher)
-		{
-			var targetMethods = EnumerateRuntimeProbeMethods().ToArray();
-			var postfix = new HarmonyMethod(typeof(DiscoveryTools), nameof(RuntimeProbePostfix));
-			var patchedCount = 0;
+		Info($"[{nameof(WaylandClipboard)}] Runtime probes attached: {patchedCount} methods.");
+	}
 
-			foreach (var method in targetMethods)
+	private static void RuntimeProbePostfix(MethodBase __originalMethod)
+	{
+		if (__originalMethod == null)
+			return;
+
+		var key = $"{__originalMethod.DeclaringType?.FullName}.{__originalMethod.Name}";
+		if (!LoggedRuntimeMethods.Add(key))
+			return;
+
+		Info($"[{nameof(WaylandClipboard)}] Runtime hit: {key}");
+	}
+
+	private static IEnumerable<MethodBase> EnumerateRuntimeProbeMethods()
+	{
+		foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(DiscoveryTools.IsInterestingAssembly))
+		{
+			Type[] types;
+			try
 			{
-				try
-				{
-					patcher.Patch(method, postfix: postfix);
-					patchedCount++;
-				}
-				catch (Exception ex)
-				{
-					Warn($"[{nameof(WaylandClipboard)}] Failed to patch probe method {method.DeclaringType?.FullName}.{method.Name}: {ex.Message}");
-				}
+				types = asm.GetTypes();
+			}
+			catch (ReflectionTypeLoadException rtl)
+			{
+				types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
+			}
+			catch
+			{
+				continue;
 			}
 
-			Info($"[{nameof(WaylandClipboard)}] Runtime probes attached: {patchedCount} methods.");
-		}
-
-		public static void RuntimeProbePostfix(MethodBase __originalMethod)
-		{
-			if (__originalMethod == null)
-				return;
-
-			var key = $"{__originalMethod.DeclaringType?.FullName}.{__originalMethod.Name}";
-			if (!LoggedRuntimeMethods.Add(key))
-				return;
-
-			Info($"[{nameof(WaylandClipboard)}] Runtime hit: {key}");
-		}
-
-		private static IEnumerable<MethodBase> EnumerateRuntimeProbeMethods()
-		{
-			foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(IsInterestingAssembly))
+			foreach (var type in types)
 			{
-				Type[] types;
+				if (DiscoveryTools.ScoreType(type) <= 0)
+					continue;
+
+				MethodInfo[] methods;
 				try
 				{
-					types = asm.GetTypes();
-				}
-				catch (ReflectionTypeLoadException rtl)
-				{
-					types = rtl.Types.Where(t => t != null).Cast<Type>().ToArray();
+					methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
 				}
 				catch
 				{
 					continue;
 				}
 
-				foreach (var type in types)
+				foreach (var method in methods)
 				{
-					if (ScoreType(type) <= 0)
+					if (method.IsAbstract || method.ContainsGenericParameters)
+						continue;
+					if (method.IsSpecialName)
+						continue;
+					if (method.GetMethodBody() == null)
+						continue;
+					if (DiscoveryTools.ScoreMethod(method) <= 0)
 						continue;
 
-					MethodInfo[] methods;
-					try
-					{
-						methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-					}
-					catch
-					{
-						continue;
-					}
-
-					foreach (var method in methods)
-					{
-						if (method.IsAbstract || method.ContainsGenericParameters)
-							continue;
-						if (method.IsSpecialName)
-							continue;
-						if (method.GetMethodBody() == null)
-							continue;
-						if (ScoreMethod(method) <= 0)
-							continue;
-
-						yield return method;
-					}
+					yield return method;
 				}
 			}
-		}
-
-		private static bool IsInterestingAssembly(Assembly asm)
-		{
-			var name = asm.GetName().Name;
-			if (string.IsNullOrEmpty(name))
-				return false;
-
-			return AssemblyPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-		}
-
-		private static int ScoreType(Type type)
-		{
-			var fullName = type.FullName ?? type.Name;
-			var score = CountKeywordMatches(fullName);
-			return score;
-		}
-
-		private static int ScoreMethod(MethodInfo method)
-		{
-			var score = CountKeywordMatches(method.Name);
-			if (method.GetParameters().Any(p => CountKeywordMatches(p.ParameterType.Name) > 0))
-				score += 1;
-			if (method.ReturnType != null && CountKeywordMatches(method.ReturnType.Name) > 0)
-				score += 1;
-			return score;
-		}
-
-		private static int CountKeywordMatches(string? value)
-		{
-			if (string.IsNullOrEmpty(value))
-				return 0;
-
-			var count = 0;
-			foreach (var keyword in Keywords)
-			{
-				if (value.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-					count++;
-			}
-			return count;
 		}
 	}
 
 	public static class Patch_LinuxClipboardInterface
 	{
-		private enum ClipboardBackend
-		{
-			Wayland,
-			X11,
-			None
-		}
-
-		private static ClipboardBackend? backend;
-
-		private static ClipboardBackend Backend
-		{
-			get
-			{
-				if (backend.HasValue)
-					return backend.Value;
-
-				if (CommandExists("wl-copy") && CommandExists("wl-paste"))
-				{
-					backend = ClipboardBackend.Wayland;
-					Info("Using Wayland clipboard backend (wl-copy/wl-paste).");
-				}
-				else if (CommandExists("xclip"))
-				{
-					backend = ClipboardBackend.X11;
-					Info("Using X11 clipboard backend (xclip).");
-				}
-				else
-				{
-					backend = ClipboardBackend.None;
-					ErrorMsg("No clipboard backend available. Install wl-clipboard or xclip.");
-				}
-
-				return backend.Value;
-			}
-		}
-
-		private static bool CommandExists(string command)
-		{
-			try
-			{
-				var psi = new ProcessStartInfo(command, "--version");
-				psi.RedirectStandardError = true;
-				psi.RedirectStandardOutput = true;
-				psi.UseShellExecute = false;
-				using var p = Process.Start(psi);
-				if (p == null)
-					return false;
-
-				p.WaitForExit(1000);
-				return true;
-			}
-			catch
-			{
-				return false;
-			}
-		}
+		private static BackendDetector.ClipboardBackend Backend => WaylandClipboard.backendDetector?.DetectBackend() ?? BackendDetector.ClipboardBackend.None;
 
 		static ProcessStartInfo GetReadPSI(string mimeType = "")
 		{
 			ProcessStartInfo psi;
-			if (Backend == ClipboardBackend.Wayland)
+			if (Backend == BackendDetector.ClipboardBackend.Wayland)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "-n" : $"--type {mimeType} -n";
 				psi = new ProcessStartInfo("wl-paste", args);
 			}
-			else if (Backend == ClipboardBackend.X11)
+			else if (Backend == BackendDetector.ClipboardBackend.X11)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "-sel clipboard -o" : $"-sel clipboard -t {mimeType} -o";
 				psi = new ProcessStartInfo("xclip", args);
@@ -364,12 +254,12 @@ public class WaylandClipboard : ResoniteMod
 		static ProcessStartInfo GetWritePSI(string mimeType = "")
 		{
 			ProcessStartInfo psi;
-			if (Backend == ClipboardBackend.Wayland)
+			if (Backend == BackendDetector.ClipboardBackend.Wayland)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "" : $"--type {mimeType}";
 				psi = new ProcessStartInfo("wl-copy", args);
 			}
-			else if (Backend == ClipboardBackend.X11)
+			else if (Backend == BackendDetector.ClipboardBackend.X11)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "-sel clipboard" : $"-sel clipboard -t {mimeType} -i";
 				psi = new ProcessStartInfo("xclip", args);
@@ -400,9 +290,9 @@ public class WaylandClipboard : ResoniteMod
 			try
 			{
 				ProcessStartInfo psi;
-				if (Backend == ClipboardBackend.Wayland)
+				if (Backend == BackendDetector.ClipboardBackend.Wayland)
 					psi = new ProcessStartInfo("wl-paste", "-l");
-				else if (Backend == ClipboardBackend.X11)
+				else if (Backend == BackendDetector.ClipboardBackend.X11)
 					psi = new ProcessStartInfo("xclip", "-sel clipboard -t TARGETS -o");
 				else
 					return Array.Empty<string>();
@@ -426,7 +316,7 @@ public class WaylandClipboard : ResoniteMod
 					.Split('\n', StringSplitOptions.RemoveEmptyEntries)
 					.Select(s => s.Trim())
 					.Where(s => !string.IsNullOrEmpty(s))
-					.Select(s => Backend == ClipboardBackend.X11 && s == "UTF8_STRING" ? "text/plain;charset=utf-8" : s)
+					.Select(s => Backend == BackendDetector.ClipboardBackend.X11 && s == "UTF8_STRING" ? "text/plain;charset=utf-8" : s)
 					.ToArray();
 				return mimes;
 			}
@@ -444,7 +334,7 @@ public class WaylandClipboard : ResoniteMod
 			{
 				try
 				{
-					if (Backend == ClipboardBackend.None)
+					if (Backend == BackendDetector.ClipboardBackend.None)
 					{
 						__result = Task.FromException<string>(new InvalidOperationException("No clipboard backend available."));
 						return false;
@@ -500,7 +390,7 @@ public class WaylandClipboard : ResoniteMod
 			{
 				try
 				{
-					if (Backend == ClipboardBackend.None)
+					if (Backend == BackendDetector.ClipboardBackend.None)
 					{
 						__result = false;
 						return false;
@@ -525,7 +415,7 @@ public class WaylandClipboard : ResoniteMod
 			{
 				try
 				{
-					if (Backend == ClipboardBackend.None)
+					if (Backend == BackendDetector.ClipboardBackend.None)
 					{
 						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No clipboard backend available."));
 						return false;
@@ -580,7 +470,7 @@ public class WaylandClipboard : ResoniteMod
 			{
 				try
 				{
-					if (Backend == ClipboardBackend.None)
+					if (Backend == BackendDetector.ClipboardBackend.None)
 					{
 						__result = Task.FromResult(false);
 						return false;
@@ -627,7 +517,7 @@ public class WaylandClipboard : ResoniteMod
 			{
 				try
 				{
-					if (Backend == ClipboardBackend.None)
+					if (Backend == BackendDetector.ClipboardBackend.None)
 					{
 						__result = Task.FromResult(false);
 						return false;

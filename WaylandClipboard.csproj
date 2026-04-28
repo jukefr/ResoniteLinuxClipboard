@@ -8,6 +8,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(ResonitePath)' == ''">
@@ -51,6 +52,14 @@
 		<Reference Include="ResoniteHotReloadLib">
 			<HintPath>$(ResonitePath)/rml_libs/ResoniteHotReloadLib.dll</HintPath>
 		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="WaylandClipboard.Core/WaylandClipboard.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="WaylandClipboard.cs" />
 	</ItemGroup>
 
 	<Target Name="Copy" DependsOnTargets="Build">

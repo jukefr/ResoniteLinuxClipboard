@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../WaylandClipboard.Core/WaylandClipboard.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="DiscoveryToolsTests.cs" />
+    <Compile Include="ConfigurationTests.cs" />
+    <Compile Include="BackendDetectionTests.cs" />
+    <Compile Include="MimeTypeTests.cs" />
+    <Compile Include="InputValidationTests.cs" />
+  </ItemGroup>
+
+</Project>
