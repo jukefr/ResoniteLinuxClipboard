@@ -30,10 +30,10 @@ jobs:
         dotnet-quality: 'preview'
 
     - name: Restore dependencies
-      run: dotnet restore LinuxClipboard.csproj
+      run: dotnet restore LinuxClipboard.csproj /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
 
     - name: Build
-      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore
+      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
 
     - name: Get version from csproj
       id: get_version
