@@ -22,7 +22,7 @@ public class LinuxClipboard : ResoniteMod
 	public override string Version => typeof(LinuxClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 	public override string Link => "https://github.com/jukefr/ResoniteLinuxClipboard/";
 
-	private static readonly Harmony harmony = new Harmony("ResoniteLinuxClipboard");
+	private static readonly Harmony harmony = new Harmony("com.github.jukefr.ResoniteLinuxClipboard");
 	private static bool discoveryStarted;
 	private static BackendDetector? backendDetector;
 
