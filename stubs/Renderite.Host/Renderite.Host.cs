@@ -21,8 +21,8 @@ namespace Renderite.Host {
             }
         }
         
-        // In real game this is a property with getter, not a field
-        public static ImageFormat[] ImageFormats { get; } = new ImageFormat[0];
+        // This is a PUBLIC STATIC READONLY FIELD in the real game, not a property!
+        public static readonly ImageFormat[] ImageFormats = new ImageFormat[0];
     }
 
     public interface IClipboardInterface {
