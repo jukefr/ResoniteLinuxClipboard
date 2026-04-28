@@ -63,6 +63,10 @@
 		<Exec Command='dotnet build "stubs/Renderite.Host/Renderite.Host.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
 	</Target>
 
+	<Target Name="BootstrapOpenSourceDeps" BeforeTargets="BuildStubs">
+		<Exec Command='pwsh -NoProfile -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)/tools/bootstrap-deps.ps1"' />
+	</Target>
+
 	<ItemGroup>
 		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
 	</ItemGroup>
