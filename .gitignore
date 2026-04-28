@@ -3,4 +3,4 @@ obj/
 stubs/output/
 stubs/prebuilt/**/*.deps.json
 stubs/prebuilt/**/*.pdb
-!stubs/prebuilt/**/*.dll
+stubs/prebuilt/**/*.dll
