@@ -55,7 +55,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
+		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" Private="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="All" />
 	</ItemGroup>
 
 	<ItemGroup>
