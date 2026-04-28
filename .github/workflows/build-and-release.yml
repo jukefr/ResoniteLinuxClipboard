@@ -38,9 +38,24 @@ jobs:
 
         echo "=== Ensuring ResoniteModLoader.dll is present ==="
         if [ ! -f "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll" ]; then
-          # ResoniteModLoader is not available from NuGet in this repo.
-          # If you can provide a NuGet feed/package for it later, we can remove curl entirely.
-          curl -sL "https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll" -o "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
+          cat > /tmp/resmod.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net10.0</TargetFramework>
+              <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="ResoniteModLoader" Version="5.0.1" />
+            </ItemGroup>
+          </Project>
+EOF
+          dotnet restore /tmp/resmod.csproj
+          DLL_PATH="$HOME/.nuget/packages/resonitemodloader/5.0.1/lib/net10.0/ResoniteModLoader.dll"
+          if [ ! -f "$DLL_PATH" ]; then
+            echo "Could not find ResoniteModLoader dll at $DLL_PATH" >&2
+            exit 1
+          fi
+          cp "$DLL_PATH" "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
         fi
 
         echo "=== Ensuring 0Harmony.dll is present ==="
