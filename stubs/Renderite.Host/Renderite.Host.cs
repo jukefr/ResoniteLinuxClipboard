@@ -21,7 +21,8 @@ namespace Renderite.Host {
             }
         }
         
-        public static ImageFormat[] ImageFormats { get; } = Array.Empty<ImageFormat>();
+        // In real game this is a property with getter, not a field
+        public static ImageFormat[] ImageFormats { get; } = new ImageFormat[0];
     }
 
     public interface IClipboardInterface {
