@@ -59,6 +59,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Compile Include="LinuxClipboard.cs" />
 	</ItemGroup>
 

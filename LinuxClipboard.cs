@@ -52,6 +52,7 @@ public class LinuxClipboard : ResoniteMod
 
 	public static void InitMod()
 	{
+		backendDetector = new BackendDetector();
 		harmony.PatchAll();
 	}
 
