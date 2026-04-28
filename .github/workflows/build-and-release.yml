@@ -48,7 +48,7 @@ jobs:
               <PackageReference Include="ResoniteModLoader" Version="5.0.1" />
             </ItemGroup>
           </Project>
-EOF
+          EOF
           dotnet restore /tmp/resmod.csproj
           DLL_PATH="$HOME/.nuget/packages/resonitemodloader/5.0.1/lib/net10.0/ResoniteModLoader.dll"
           if [ ! -f "$DLL_PATH" ]; then
@@ -64,25 +64,25 @@ EOF
           cat > /tmp/harmony.csproj <<'EOF'
           <Project Sdk="Microsoft.NET.Sdk">
             <PropertyGroup>
-              <TargetFramework>net8.0</TargetFramework>
+              <TargetFramework>net10.0</TargetFramework>
               <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
             </PropertyGroup>
             <ItemGroup>
               <PackageReference Include="Lib.Harmony" Version="2.3.3" />
             </ItemGroup>
           </Project>
-EOF
+          EOF
           dotnet restore /tmp/harmony.csproj
           DLL_PATH=$(dotnet --info >/dev/null 2>&1; find "$HOME/.nuget/packages" -path '*Lib.Harmony*' -name '0Harmony.dll' | sort | head -n 1)
           if [ -z "$DLL_PATH" ]; then
             # Fallback: use known nuget package layout.
-            DLL_PATH="$HOME/.nuget/packages/lib.harmony/2.3.3/lib/net8.0/0Harmony.dll"
+             DLL_PATH="$HOME/.nuget/packages/lib.harmony/2.3.3/lib/net10.0/0Harmony.dll"
           fi
           cp "$DLL_PATH" "${OUTPUT_DIR}/rml_libs/0Harmony.dll"
         fi
 
         echo "=== DLLs used for build ==="
-        ls -la "${OUTPUT_DIR}/Libraries" "${OUTPUT_DIR}/rml_libs" || true
+          ls -la "${OUTPUT_DIR}/Libraries" "${OUTPUT_DIR}/rml_libs" || true
 
     - name: Restore dependencies
       run: dotnet restore LinuxClipboard.csproj
