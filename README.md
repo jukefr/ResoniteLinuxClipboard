@@ -1,49 +1,49 @@
-# WaylandClipboard
+# LinuxClipboard#
 
-A [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader) mod that provides Wayland clipboard support for Resonite on Linux.
+A [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader) mod that provides Linux clipboard support for Resonite.
 
-## Features
+## Features#
 
-- **Wayland support**: Uses `wl-copy` and `wl-paste` (from `wl-clipboard` package)
-- **X11 fallback**: Uses `xclip` when Wayland tools aren't available
-- **Text clipboard**: Copy/paste text between Resonite and system clipboard
-- **Image clipboard**: Copy/paste images (PNG format)
-- **Configurable**: Mod configuration options via ResoniteModLoader
-- **Error handling**: Robust error handling with timeouts for all clipboard operations
-- **Discovery mode**: Optional debugging mode to scan for inspector/font candidates (disabled by default)
+- **Linux support**: Uses `wl-copy` and `wl-paste` (from `wl-clipboard` package)#
+- **X11 fallback**: Uses `xclip` when Linux tools aren't available#
+- **Text clipboard**: Copy/paste text between Resonite and system clipboard#
+- **Image clipboard**: Copy/paste images (PNG format)#
+- **Configurable**: Mod configuration options via ResoniteModLoader#
+- **Error handling**: Robust error handling with timeouts for all clipboard operations#
+- **Discovery mode**: Optional debugging mode to scan for inspector/font candidates (disabled by default)#
 
-## Backends
+## Backends#
 
 | Backend | Tools Required | Status |
 |---------|----------------|--------|
-| Wayland | `wl-copy`, `wl-paste` (wl-clipboard package) | Primary |
+| Linux | `wl-copy`, `wl-paste` (wl-clipboard package) | Primary |
 | X11 | `xclip` | Fallback |
 
-## Installation
+## Installation#
 
-### Prerequisites
+### Prerequisites#
 
 Install one of these from your package manager:
 
-- **Wayland sessions**: `wl-clipboard` package (provides `wl-copy` and `wl-paste`)
+- **Linux sessions**: `wl-clipboard` package (provides `wl-copy` and `wl-paste`)
 - **X11 sessions**: `xclip`
 
-### For Steam Users
+### For Steam Users#
 
 If you launch through Steam, you may need to copy the required binaries into your Resonite directory:
 
 ```bash
-cp /usr/bin/wl-copy ~/.steam/steam/steamapps/common/Resonite
-cp /usr/bin/wl-paste ~/.steam/steam/steamapps/common/Resonite
-cp /usr/bin/xclip ~/.steam/steam/steamapps/common/Resonite
+cp /usr/bin/wl-copy ~/.steam/steam/steamapps/common/Resonite`
+cp /usr/bin/wl-paste ~/.steam/steam/steamapps/common/Resonite`
+cp /usr/bin/xclip ~/.steam/steam/steamapps/common/Resonite`
 ```
 
-### Mod Installation
+### Mod Installation#
 
 1. Build the mod: `dotnet build`
-2. Copy the output DLL to your Resonite mods folder: `cp bin/Debug/net10.0/WaylandClipboard.dll ~/.steam/steam/steamapps/common/Resonite/rml_mods/`
+2. Copy the output DLL to your Resonite mods folder: `cp bin/Debug/net10.0/LinuxClipboard.dll ~/.steam/steam/steamapps/common/Resonite/rml_mods/`
 
-## Configuration
+## Configuration#
 
 The mod supports the following configuration options (via ResoniteModLoader's config system):
 
@@ -54,56 +54,56 @@ The mod supports the following configuration options (via ResoniteModLoader's co
 
 To configure, use ResoniteModLoader's configuration interface in-game.
 
-## Building
+## Building#
 
-### Prerequisites
+### Prerequisites#
 
-- .NET 10.0 SDK
-- Resonite installed (for ResoniteModLoader.dll, HarmonyLib.dll, etc.)
+- .NET 10.0 SDK#
+- Resonite installed (for ResoniteModLoader.dll, HarmonyLib.dll, etc.)#
 
-### Build Commands
+### Build Commands#
 
 ```bash
 # Build main mod
 dotnet build
 
 # Build and copy to Resonite mods folder
-dotnet build && dotnet build -t:Copy
+dotnet build -t:Copy`
 ```
 
-## Testing
+## Testing#
 
 The project includes comprehensive unit tests for core logic.
 
-### Test Structure
+### Test Structure#
 
 ```
-ResoniteWaylandClipboard/
-├── WaylandClipboard.Core/          # Pure logic (testable, no Resonite dependencies)
-│   ├── DiscoveryTools.cs       # Keyword matching, type scoring
-│   ├── BackendDetector.cs     # Backend detection logic
-│   └── IProcessRunner.cs      # Interface for mocking Process.Start
-├── WaylandClipboard.Tests/       # xUnit test project
-│   ├── DiscoveryToolsTests.cs  # Tests for keyword matching, scoring
-│   └── BackendDetectionTests.cs # Tests for backend detection
-└── WaylandClipboard.csproj      # Main mod (requires ResoniteModLoader)
+ResoniteLinuxClipboard/
+├── LinuxClipboard.Core/          # Pure logic (testable, no Resonite dependencies)#
+│   ├── DiscoveryTools.cs       # Keyword matching, type scoring#
+│   ├── BackendDetector.cs     # Backend detection logic#
+│   └── IProcessRunner.cs      # Interface for mocking Process.Start#
+├── LinuxClipboard.Tests/       # xUnit test project#
+│   ├── DiscoveryToolsTests.cs  # Tests for keyword matching, scoring#
+│   └── BackendDetectionTests.cs # Tests for backend detection#
+└── LinuxClipboard.cs           # Main mod class#
 ```
 
-### Running Tests
+### Running Tests#
 
 ```bash
 # Run all tests
-dotnet test WaylandClipboard.Tests/WaylandClipboard.Tests.csproj
+dotnet test LinuxClipboard.Tests/LinuxClipboard.Tests.csproj`
 
 # Run specific test category
-dotnet test WaylandClipboard.Tests/WaylandClipboard.Tests.csproj --filter "FullyQualifiedName~DiscoveryTools"
+dotnet test LinuxClipboard.Tests/LinuxClipboard.Tests.csproj --filter "FullyQualifiedName~DiscoveryTools"
 ```
 
-**Current test status**: 24 tests passing (18 DiscoveryTools + 3 BackendDetection + 3 placeholder)
+**Current test status**: 24 tests passing (18 DiscoveryTools + 3 BackendDetection + 3 placeholder)#
 
 Note: Some tests (Configuration, InputValidation, MimeType) require ResoniteModLoader.dll and cannot be run without the Resonite environment.
 
-## Hot Reload (Development)
+## Hot Reload (Development)#
 
 Hot reload support is optional and only active when `ResoniteHotReloadLib.dll` is present.
 
@@ -113,41 +113,41 @@ To enable hot reload code paths while developing, build with:
 dotnet build -p:DefineConstants="DEBUG;RML_HOTRELOAD"
 ```
 
-## Project Structure
+## Project Structure#
 
 ```
-ResoniteWaylandClipboard/
-├── WaylandClipboard.Core/          # Core library (no Resonite dependencies)
-│   ├── DiscoveryTools.cs
-│   ├── BackendDetector.cs
-│   └── IProcessRunner.cs
-├── WaylandClipboard.Tests/       # Test project
-│   ├── DiscoveryToolsTests.cs
-│   ├── BackendDetectionTests.cs
-│   ├── ConfigurationTests.cs    # (placeholder - needs ResoniteModLoader)
-│   ├── MimeTypeTests.cs        # (placeholder - needs refactoring)
-│   └── InputValidationTests.cs  # (placeholder - needs ResoniteModLoader)
-├── WaylandClipboard.cs           # Main mod class
-├── WaylandClipboard.Core.csproj    # Core project file
-├── WaylandClipboard.Tests.csproj  # Test project file
-├── WaylandClipboard.csproj         # Main project file
-├── README.md
-└── UNLICENSE
+ResoniteLinuxClipboard/
+├── LinuxClipboard.Core/          # Core library (no Resonite dependencies)#
+│   ├── DiscoveryTools.cs#
+│   ├── BackendDetector.cs#
+│   └── IProcessRunner.cs#
+├── LinuxClipboard.Tests/       # Test project#
+│   ├── DiscoveryToolsTests.cs#
+│   ├── BackendDetectionTests.cs#
+│   ├── ConfigurationTests.cs    # (placeholder - needs ResoniteModLoader)#
+│   ├── MimeTypeTests.cs        # (placeholder - needs refactoring)#
+│   └── InputValidationTests.cs  # (placeholder - needs ResoniteModLoader)#
+├── LinuxClipboard.cs           # Main mod class#
+├── LinuxClipboard.Core.csproj    # Core project file#
+├── LinuxClipboard.Tests.csproj  # Test project file#
+├── LinuxClipboard.csproj         # Main project file#
+├── README.md#
+└── LICENSE#                   # GNU GPL-3.0#
 ```
 
-## Improvements Made
+## Improvements Made#
 
-- ✅ Made discovery mode configurable (default: off) via `EnableDiscovery` config
-- ✅ Added clipboard backend validation (check if tools exist before using)
-- ✅ Added comprehensive error handling (try-catch) to all clipboard operations
-- ✅ Added null checks for `Process.Start` returns
-- ✅ Fixed logging misuse (separated Info/Warn/Error levels)
-- ✅ Added configurable timeouts via `ClipboardTimeoutMs` config
-- ✅ Fixed MIME type handling (UTF8_STRING mapping only for X11)
-- ✅ Added input validation (null handling for SetText/SetBitmap)
-- ✅ Created WaylandClipboard.Core for testable logic
-- ✅ Added 24 unit tests (xUnit + NSubstitute)
+- ✅ Made discovery mode configurable (default: off) via `EnableDiscovery` config#
+- ✅ Added clipboard backend validation (check if tools exist before using)#
+- ✅ Added comprehensive error handling (try-catch) to all clipboard operations#
+- ✅ Added null checks for `Process.Start` returns#
+- ✅ Fixed logging misuse (separated Info/Warn/Error levels)#
+- ✅ Added configurable timeouts via `ClipboardTimeoutMs` config#
+- ✅ Fixed MIME type handling (UTF8_STRING mapping only for X11)#
+- ✅ Added input validation (null handling for SetText/SetBitmap)#
+- ✅ Created LinuxClipboard.Core for testable logic#
+- ✅ Added 24 unit tests (xUnit + NSubstitute)#
 
-## License
+## License#
 
-This project is released under the UNLICENSE (public domain).
+This project is released under the **GNU GPL-3.0** - see [LICENSE](LICENSE) for details.

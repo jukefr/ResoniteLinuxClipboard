@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Xunit;
 using NSubstitute;
 
-namespace WaylandClipboard.Tests;
+namespace LinuxClipboard.Tests;
 
 public class BackendDetectionTests
 {

@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../WaylandClipboard.Core/WaylandClipboard.Core.csproj" />
+    <ProjectReference Include="../LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

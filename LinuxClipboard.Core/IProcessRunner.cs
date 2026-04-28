@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WaylandClipboard;
+namespace LinuxClipboard;
 
 public interface IProcessRunner
 {

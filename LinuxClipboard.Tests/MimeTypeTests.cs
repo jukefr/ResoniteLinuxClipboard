@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace WaylandClipboard.Tests;
+namespace LinuxClipboard.Tests;
 
 public class MimeTypeTests
 {

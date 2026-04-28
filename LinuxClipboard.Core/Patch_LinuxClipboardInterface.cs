@@ -1,12 +1,12 @@
 using System.Diagnostics;
 
-namespace WaylandClipboard;
+namespace LinuxClipboard;
 
 public class Patch_LinuxClipboardInterface
 {
     internal enum ClipboardBackend
     {
-        Wayland,
+        Linux,
         X11,
         None
     }
@@ -25,7 +25,7 @@ public class Patch_LinuxClipboardInterface
 
             if (CommandExists("wl-copy") && CommandExists("wl-paste"))
             {
-                backend = ClipboardBackend.Wayland;
+                backend = ClipboardBackend.Linux;
             }
             else if (CommandExists("xclip"))
             {

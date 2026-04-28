@@ -11,18 +11,18 @@ using HarmonyLib;
 using ResoniteHotReloadLib;
 #endif
 
-[assembly: InternalsVisibleTo("WaylandClipboard.Tests")]
+[assembly: InternalsVisibleTo("LinuxClipboard.Tests")]
 
-namespace WaylandClipboard;
+namespace LinuxClipboard;
 
-public class WaylandClipboard : ResoniteMod
+public class LinuxClipboard : ResoniteMod
 {
-	public override string Name => "WaylandClipboard";
+	public override string Name => "LinuxClipboard";
 	public override string Author => "yosh";
-	public override string Version => typeof(WaylandClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-	public override string Link => "https://git.unix.dog/yosh/ResoniteWaylandClipboard/";
+	public override string Version => typeof(LinuxClipboard).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+	public override string Link => "https://git.unix.dog/yosh/ResoniteLinuxClipboard/";
 
-	private static readonly Harmony harmony = new Harmony("org.yosh.WaylandClipboard");
+	private static readonly Harmony harmony = new Harmony("org.yosh.LinuxClipboard");
 	private static bool discoveryStarted;
 	private static BackendDetector? backendDetector;
 
@@ -73,7 +73,7 @@ public class WaylandClipboard : ResoniteMod
 			return;
 
 		discoveryStarted = true;
-		Info($"[{nameof(WaylandClipboard)}] Discovery mode enabled: scanning for inspector/font candidates.");
+		Info($"[{nameof(LinuxClipboard)}] Discovery mode enabled: scanning for inspector/font candidates.");
 		DumpCandidates();
 		PatchRuntimeProbes(harmony);
 	}
@@ -88,15 +88,15 @@ public class WaylandClipboard : ResoniteMod
 
 	static void OnHotReload(ResoniteMod modInstance)
 	{
-		instance = (WaylandClipboard)modInstance;
+		instance = (LinuxClipboard)modInstance;
 		// config = modInstance.GetConfiguration();
 		InitMod();
 	}
 #endif
 
-	private static void Info(string message) => Msg($"[{nameof(WaylandClipboard)}] {message}");
-	private static void Warn(string message) => Msg($"[{nameof(WaylandClipboard)}] {message}");
-	private static void ErrorMsg(string message) => Error($"[{nameof(WaylandClipboard)}] {message}");
+	private static void Info(string message) => Msg($"[{nameof(LinuxClipboard)}] {message}");
+	private static void Warn(string message) => Msg($"[{nameof(LinuxClipboard)}] {message}");
+	private static void ErrorMsg(string message) => Error($"[{nameof(LinuxClipboard)}] {message}");
 
 	private static readonly HashSet<string> LoggedRuntimeMethods = new HashSet<string>();
 
@@ -115,7 +115,7 @@ public class WaylandClipboard : ResoniteMod
 			}
 			catch (Exception ex)
 			{
-				Warn($"[{nameof(WaylandClipboard)}] Discovery scan failed for assembly '{asm.GetName().Name}': {ex.Message}");
+				Warn($"[{nameof(LinuxClipboard)}] Discovery scan failed for assembly '{asm.GetName().Name}': {ex.Message}");
 				continue;
 			}
 
@@ -133,7 +133,7 @@ public class WaylandClipboard : ResoniteMod
 					.Distinct()
 					.ToArray();
 
-				Info($"[{nameof(WaylandClipboard)}] Candidate[{score}] {type.FullName} :: {string.Join(", ", methods)}");
+				Info($"[{nameof(LinuxClipboard)}] Candidate[{score}] {type.FullName} :: {string.Join(", ", methods)}");
 			}
 		}
 	}
@@ -141,7 +141,7 @@ public class WaylandClipboard : ResoniteMod
 	private static void PatchRuntimeProbes(Harmony patcher)
 	{
 		var targetMethods = EnumerateRuntimeProbeMethods().ToArray();
-		var postfix = new HarmonyMethod(typeof(WaylandClipboard), nameof(RuntimeProbePostfix));
+		var postfix = new HarmonyMethod(typeof(LinuxClipboard), nameof(RuntimeProbePostfix));
 		var patchedCount = 0;
 
 		foreach (var method in targetMethods)
@@ -153,11 +153,11 @@ public class WaylandClipboard : ResoniteMod
 			}
 			catch (Exception ex)
 			{
-				Warn($"[{nameof(WaylandClipboard)}] Failed to patch probe method {method.DeclaringType?.FullName}.{method.Name}: {ex.Message}");
+				Warn($"[{nameof(LinuxClipboard)}] Failed to patch probe method {method.DeclaringType?.FullName}.{method.Name}: {ex.Message}");
 			}
 		}
 
-		Info($"[{nameof(WaylandClipboard)}] Runtime probes attached: {patchedCount} methods.");
+		Info($"[{nameof(LinuxClipboard)}] Runtime probes attached: {patchedCount} methods.");
 	}
 
 	private static void RuntimeProbePostfix(MethodBase __originalMethod)
@@ -169,7 +169,7 @@ public class WaylandClipboard : ResoniteMod
 		if (!LoggedRuntimeMethods.Add(key))
 			return;
 
-		Info($"[{nameof(WaylandClipboard)}] Runtime hit: {key}");
+		Info($"[{nameof(LinuxClipboard)}] Runtime hit: {key}");
 	}
 
 	private static IEnumerable<MethodBase> EnumerateRuntimeProbeMethods()
@@ -224,12 +224,12 @@ public class WaylandClipboard : ResoniteMod
 
 	public static class Patch_LinuxClipboardInterface
 	{
-		private static BackendDetector.ClipboardBackend Backend => WaylandClipboard.backendDetector?.DetectBackend() ?? BackendDetector.ClipboardBackend.None;
+		private static BackendDetector.ClipboardBackend Backend => LinuxClipboard.backendDetector?.DetectBackend() ?? BackendDetector.ClipboardBackend.None;
 
 		static ProcessStartInfo GetReadPSI(string mimeType = "")
 		{
 			ProcessStartInfo psi;
-			if (Backend == BackendDetector.ClipboardBackend.Wayland)
+			if (Backend == BackendDetector.ClipboardBackend.Linux)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "-n" : $"--type {mimeType} -n";
 				psi = new ProcessStartInfo("wl-paste", args);
@@ -254,7 +254,7 @@ public class WaylandClipboard : ResoniteMod
 		static ProcessStartInfo GetWritePSI(string mimeType = "")
 		{
 			ProcessStartInfo psi;
-			if (Backend == BackendDetector.ClipboardBackend.Wayland)
+			if (Backend == BackendDetector.ClipboardBackend.Linux)
 			{
 				var args = string.IsNullOrEmpty(mimeType) ? "" : $"--type {mimeType}";
 				psi = new ProcessStartInfo("wl-copy", args);
@@ -290,7 +290,7 @@ public class WaylandClipboard : ResoniteMod
 			try
 			{
 				ProcessStartInfo psi;
-				if (Backend == BackendDetector.ClipboardBackend.Wayland)
+				if (Backend == BackendDetector.ClipboardBackend.Linux)
 					psi = new ProcessStartInfo("wl-paste", "-l");
 				else if (Backend == BackendDetector.ClipboardBackend.X11)
 					psi = new ProcessStartInfo("xclip", "-sel clipboard -t TARGETS -o");

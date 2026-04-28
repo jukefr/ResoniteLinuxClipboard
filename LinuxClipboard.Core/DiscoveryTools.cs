@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Collections.Generic;
 
-namespace WaylandClipboard;
+namespace LinuxClipboard;
 
 public static class DiscoveryTools
 {

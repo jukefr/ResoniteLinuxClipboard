@@ -55,11 +55,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="WaylandClipboard.Core/WaylandClipboard.Core.csproj" />
+		<ProjectReference Include="LinuxClipboard.Core/LinuxClipboard.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="WaylandClipboard.cs" />
+		<Compile Include="LinuxClipboard.cs" />
 	</ItemGroup>
 
 	<Target Name="Copy" DependsOnTargets="Build">
