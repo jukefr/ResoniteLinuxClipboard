@@ -1,4 +1,4 @@
-name: Release
+name: Build and Release
 
 on:
   push:
@@ -9,12 +9,57 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Setup .NET 10.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+      continue-on-error: true
+
+    - name: Setup .NET 10.0 (Preview fallback)
+      if: failure()
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.100-preview.7.24466.3'
+        dotnet-quality: 'preview'
+
+    - name: Download open-source DLLs
+      run: |
+        STUB_DIR="${{ github.workspace }}/stubs"
+        OUTPUT_DIR="${STUB_DIR}/prebuilt"
+        mkdir -p "${OUTPUT_DIR}/Libraries"
+        mkdir -p "${OUTPUT_DIR}/rml_libs"
+
+        # Download ResoniteModLoader.dll from GitHub releases
+        echo "Downloading ResoniteModLoader..."
+        curl -sL "https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll" -o "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
+
+        # Download 0Harmony.dll (HarmonyLib) from NuGet
+        echo "Downloading HarmonyLib (0Harmony)..."
+        curl -sL "https://www.nuget.org/api/v2/package/Lib.Harmony/2.3.3" -o /tmp/harmony.nupkg
+        unzip -q /tmp/harmony.nupkg -d /tmp/harmony
+        cp /tmp/harmony/lib/net8.0/0Harmony.dll "${OUTPUT_DIR}/rml_libs/"
+        rm -rf /tmp/harmony /tmp/harmony.nupkg
+
+        echo "=== Downloaded DLLs ==="
+        ls -la "${OUTPUT_DIR}/Libraries/" "${OUTPUT_DIR}/rml_libs/"
+
+    - name: Build proprietary stubs (Elements.Assets, Renderite.Host)
+      run: |
+        dotnet build stubs/Elements.Assets/Elements.Assets.csproj -o stubs/prebuilt
+        dotnet build stubs/Renderite.Host/Renderite.Host.csproj -o stubs/prebuilt
+
+    - name: Restore dependencies
+      run: dotnet restore LinuxClipboard.csproj /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
+
+    - name: Build
+      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
 
     - name: Get version from csproj
       id: get_version
@@ -23,19 +68,11 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
 
-    - name: Download latest release asset
-      run: |
-        echo "Downloading latest LinuxClipboard.dll from releases..."
-        gh release download --pattern "LinuxClipboard.dll" --dir ./download || echo "No existing release found"
-        ls -la ./download/ 2>/dev/null || echo "Download failed"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./download/LinuxClipboard.dll
+          ./bin/Release/net10.0/LinuxClipboard.dll
         tag_name: v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
         name: Release v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
         body: |
@@ -49,8 +86,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload build artifacts (backup)
-      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: LinuxClipboard.dll
-        path: ./download/LinuxClipboard.dll
+        path: ./bin/Release/net10.0/LinuxClipboard.dll
