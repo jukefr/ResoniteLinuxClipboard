@@ -62,6 +62,10 @@
 	<ItemGroup>
 		<Reference Include="@(ResoniteReference)">
 			<Name>%(ResoniteReference.Identity)</Name>
+			<!-- For CI (and general determinism), prefer the locally built stub assemblies. -->
+			<HintPath Condition="'%(HintPath)' == '' And Exists('$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).dll')">$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).dll</HintPath>
+			<HintPath Condition="'%(HintPath)' == '' And Exists('$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).exe')">$(MSBuildProjectDirectory)/stubs/prebuilt/%(Identity).exe</HintPath>
+			<!-- Fallback to real Resonite managed binaries when ResonitePath is present. -->
 			<HintPath Condition="'%(HintPath)' == '' And Exists('$(ManagedPath)/%(Identity).dll')">$(ManagedPath)/%(Identity).dll</HintPath>
 			<HintPath Condition="'%(HintPath)' == '' And Exists('$(ManagedPath)/%(Identity).exe')">$(ManagedPath)/%(Identity).exe</HintPath>
 			<Private>false</Private>
