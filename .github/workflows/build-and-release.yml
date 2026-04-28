@@ -51,10 +51,10 @@ jobs:
         ls -la "${OUTPUT_DIR}/Libraries/" "${OUTPUT_DIR}/rml_libs/"
 
     - name: Restore dependencies
-      run: dotnet restore LinuxClipboard.csproj /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
+      run: dotnet restore LinuxClipboard.csproj
 
     - name: Build
-      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
+      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore
 
     - name: Get version from csproj
       id: get_version

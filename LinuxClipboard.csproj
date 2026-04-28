@@ -11,13 +11,13 @@
 		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 	</PropertyGroup>
 
+	<!-- ResonitePath is optional for CI/build: if it isn't provided, we will populate it with
+	     stub output from the BuildStubs target above. -->
 	<PropertyGroup Condition="'$(ResonitePath)' == ''">
 		<!-- default windows and linux paths, manual fallback if both don't turn up anything -->
 		<ResonitePath Condition="'$(OS)' == 'Windows_NT' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite')">C:/Program Files (x86)/Steam/steamapps/common/Resonite</ResonitePath>
 
 		<ResonitePath Condition="'$(OS)' != 'Windows_NT' and Exists('$(HOME)/.steam/steam/steamapps/common/Resonite')">$(HOME)/.steam/steam/steamapps/common/Resonite</ResonitePath>
-
-		<ResonitePath Condition="'$(ResonitePath)' == ''">G:\SteamLibrary\steamapps\common\Resonite</ResonitePath>
 	</PropertyGroup>
 
 	<!-- path containing managed dlls. for post-split, this is the same as resonite path, but still here just in case -->
@@ -44,13 +44,17 @@
 	  Ensure stub assemblies exist so the action can run just `dotnet build LinuxClipboard.csproj`.
 	  This avoids relying on downloaded/prebuilt stub artifacts.
 	-->
-	<Target Name="BuildStubs" BeforeTargets="ResolveReferences">
-		<!-- Ensure stub assemblies exist when we rely on stub output for compilation. -->
+	<Target Name="BuildStubs" BeforeTargets="PrepareForBuild">
+		<!--
+		  Build required stub assemblies into stubs/prebuilt so the rest of this project
+		  can reference them without depending on ResonitePath.
+		-->
 		<PropertyGroup>
 			<_StubOutDir>$(MSBuildProjectDirectory)/stubs/prebuilt</_StubOutDir>
+			<!-- Make ResonitePath point at our stub output so HintPaths resolve. -->
+			<ResonitePath Condition="'$(ResonitePath)' == ''">$(_StubOutDir)</ResonitePath>
 		</PropertyGroup>
 		<MakeDir Directories="$(_StubOutDir)" />
-		<!-- Don't overwrite open-source DLLs (ResoniteModLoader/Harmony) if they already exist. -->
 		<Exec Command='dotnet build "stubs/Elements.Assets/Elements.Assets.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
 		<Exec Command='dotnet build "stubs/Renderite.Host/Renderite.Host.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
 	</Target>
