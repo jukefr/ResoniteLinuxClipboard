@@ -137,9 +137,22 @@ public class LinuxClipboard : ResoniteMod
 				.Where(f => mimes.Contains(f.OLE))
 				.FirstOrDefault();
 			// ImageFormat is a struct, so check if it's the default value
-			if (format.Equals(default(Renderite.Host.ImageFormat)))
+			if (format.Equals(default(Elements.Assets.CommonClipboard.ImageFormat)))
 				return null;
 			return format.OLE;
+		}
+
+		static string GetExtensionFromMime(string mime)
+		{
+			return mime switch
+			{
+				"image/png" => "png",
+				"image/jpeg" => "jpg",
+				"image/gif" => "gif",
+				"image/bmp" => "bmp",
+				"image/tiff" => "tiff",
+				_ => "png" // default to PNG
+			};
 		}
 
 		static string[] GetClipboardMimes()
@@ -222,8 +235,36 @@ public class LinuxClipboard : ResoniteMod
 			}
 		}
 
-		// Removed Patch_GetImageMime to avoid type loading issues
-		// Image format detection is now handled directly in Patch_GetImage
+		[HarmonyPatch(typeof(LinuxClipboardInterface), "GetImageMime")]
+		public static class Patch_GetImageMime
+		{
+			static bool Prefix(ref Elements.Assets.CommonClipboard.ImageFormat? __result)
+			{
+				try
+				{
+					var mime = MyGetImageMime();
+					if (mime == null)
+					{
+						__result = null;
+					}
+					else
+					{
+						__result = new Elements.Assets.CommonClipboard.ImageFormat
+						{
+							OLE = mime,
+							Extension = GetExtensionFromMime(mime),
+							MimeType = mime
+						};
+					}
+				}
+				catch (Exception ex)
+				{
+					ErrorMsg($"Failed to get image MIME: {ex.Message}");
+					__result = null;
+				}
+				return false;
+			}
+		}
 
 		[HarmonyPatch(typeof(LinuxClipboardInterface), "HasMime")]
 		public static class Patch_HasMime
@@ -245,6 +286,61 @@ public class LinuxClipboard : ResoniteMod
 				{
 					ErrorMsg($"Failed to check MIME type {mime_type}: {ex.Message}");
 					__result = false;
+				}
+				return false;
+			}
+		}
+
+		[HarmonyPatch(typeof(LinuxClipboardInterface), nameof(LinuxClipboardInterface.GetImage))]
+		public static class Patch_GetImage
+		{
+			static bool Prefix(ref Task<Bitmap2D> __result)
+			{
+				try
+				{
+					if (Backend == BackendDetector.ClipboardBackend.None)
+					{
+						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No clipboard backend available."));
+						return false;
+					}
+
+					var mime = MyGetImageMime();
+					if (mime == null)
+					{
+						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No image format available on clipboard"));
+						return false;
+					}
+
+					var psi = GetReadPSI(mime);
+					var p = Process.Start(psi);
+					if (p == null)
+					{
+						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("Failed to start clipboard process."));
+						return false;
+					}
+
+					using (p)
+					{
+						var memstr = new MemoryStream();
+						p.StandardOutput.BaseStream.CopyTo(memstr);
+
+						if (ClipboardTimeoutMs > 0)
+							p.WaitForExit(ClipboardTimeoutMs);
+
+						__result = Task.Run(delegate {
+							try {
+								var ext = GetExtensionFromMime(mime);
+								return Bitmap2D.Load(memstr, ext, true);
+							} finally {
+								memstr.Dispose();
+							}
+						});
+					}
+				}
+				catch (Exception ex)
+				{
+					ErrorMsg($"Failed to get clipboard image: {ex.Message}");
+					__result = Task.FromException<Bitmap2D>(ex);
 				}
 				return false;
 			}
