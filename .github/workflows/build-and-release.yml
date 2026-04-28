@@ -29,26 +29,60 @@ jobs:
         dotnet-version: '10.0.100-preview.7.24466.3'
         dotnet-quality: 'preview'
 
-    - name: Download open-source DLLs
+    - name: Download ResoniteModLoader + Harmony via dotnet
       run: |
-        STUB_DIR="${{ github.workspace }}/stubs"
-        OUTPUT_DIR="${STUB_DIR}/prebuilt"
-        mkdir -p "${OUTPUT_DIR}/Libraries"
-        mkdir -p "${OUTPUT_DIR}/rml_libs"
+        set -euo pipefail
+        OUTPUT_DIR="${{ github.workspace }}/stubs/prebuilt"
 
-        # Download ResoniteModLoader.dll from GitHub releases
-        echo "Downloading ResoniteModLoader..."
-        curl -sL "https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll" -o "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
+        mkdir -p "${OUTPUT_DIR}/Libraries" "${OUTPUT_DIR}/rml_libs"
 
-        # Download 0Harmony.dll (HarmonyLib) from NuGet
-        echo "Downloading HarmonyLib (0Harmony)..."
-        curl -sL "https://www.nuget.org/api/v2/package/Lib.Harmony/2.3.3" -o /tmp/harmony.nupkg
-        unzip -q /tmp/harmony.nupkg -d /tmp/harmony
-        cp /tmp/harmony/lib/net8.0/0Harmony.dll "${OUTPUT_DIR}/rml_libs/"
-        rm -rf /tmp/harmony /tmp/harmony.nupkg
+        echo "=== Ensuring ResoniteModLoader.dll is present ==="
+        if [ ! -f "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll" ]; then
+          cat > /tmp/resmod.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net10.0</TargetFramework>
+              <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="ResoniteModLoader" Version="5.0.1" />
+            </ItemGroup>
+          </Project>
+EOF
+          dotnet restore /tmp/resmod.csproj
+          DLL_PATH="$HOME/.nuget/packages/resonitemodloader/5.0.1/lib/net10.0/ResoniteModLoader.dll"
+          if [ ! -f "$DLL_PATH" ]; then
+            echo "Could not find ResoniteModLoader dll at $DLL_PATH" >&2
+            exit 1
+          fi
+          cp "$DLL_PATH" "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
+        fi
 
-        echo "=== Downloaded DLLs ==="
-        ls -la "${OUTPUT_DIR}/Libraries/" "${OUTPUT_DIR}/rml_libs/"
+        echo "=== Ensuring 0Harmony.dll is present ==="
+        if [ ! -f "${OUTPUT_DIR}/rml_libs/0Harmony.dll" ]; then
+          # Use dotnet to restore the package, then copy the runtime assembly.
+          cat > /tmp/harmony.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net8.0</TargetFramework>
+              <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Lib.Harmony" Version="2.3.3" />
+            </ItemGroup>
+          </Project>
+EOF
+          dotnet restore /tmp/harmony.csproj
+          DLL_PATH=$(dotnet --info >/dev/null 2>&1; find "$HOME/.nuget/packages" -path '*Lib.Harmony*' -name '0Harmony.dll' | sort | head -n 1)
+          if [ -z "$DLL_PATH" ]; then
+            # Fallback: use known nuget package layout.
+            DLL_PATH="$HOME/.nuget/packages/lib.harmony/2.3.3/lib/net8.0/0Harmony.dll"
+          fi
+          cp "$DLL_PATH" "${OUTPUT_DIR}/rml_libs/0Harmony.dll"
+        fi
+
+        echo "=== DLLs used for build ==="
+        ls -la "${OUTPUT_DIR}/Libraries" "${OUTPUT_DIR}/rml_libs" || true
 
     - name: Restore dependencies
       run: dotnet restore LinuxClipboard.csproj
