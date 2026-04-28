@@ -29,6 +29,92 @@ jobs:
         dotnet-version: '10.0.100-preview.7.24466.3'
         dotnet-quality: 'preview'
 
+    - name: Create stub assemblies for Resonite dependencies
+      run: |
+        STUB_DIR="${{ github.workspace }}/stubs"
+        OUTPUT_DIR="${STUB_DIR}/prebuilt"
+        mkdir -p "${OUTPUT_DIR}/Libraries"
+        mkdir -p "${OUTPUT_DIR}/rml_libs"
+
+        # Download ResoniteModLoader.dll from GitHub releases (open source)
+        echo "Downloading ResoniteModLoader..."
+        curl -sL "https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll" -o "${OUTPUT_DIR}/Libraries/ResoniteModLoader.dll"
+
+        # Download 0Harmony.dll (HarmonyLib) from NuGet (open source)
+        echo "Downloading HarmonyLib (0Harmony)..."
+        curl -sL "https://www.nuget.org/api/v2/package/Lib.Harmony/2.3.3" -o /tmp/harmony.nupkg
+        unzip -q /tmp/harmony.nupkg -d /tmp/harmony
+        cp /tmp/harmony/lib/net8.0/0Harmony.dll "${OUTPUT_DIR}/rml_libs/"
+        rm -rf /tmp/harmony /tmp/harmony.nupkg
+
+        # Create Elements.Assets stub (proprietary Resonite assembly)
+        mkdir -p "${STUB_DIR}/Elements.Assets"
+        cat > "${STUB_DIR}/Elements.Assets/Elements.Assets.cs" << 'CSHARP_EOF'
+        using System;
+
+        namespace Elements.Assets {
+            public class CommonClipboard {
+                public enum ImageFormat {
+                    OLE,
+                    Extension
+                }
+
+                public static class ImageFormats {
+                    public static ImageFormat OLE => ImageFormat.OLE;
+                    public static ImageFormat Extension => ImageFormat.Extension;
+                }
+            }
+
+            public class Bitmap2D {
+                public void Save(string path, object format) { }
+                public void Save(string path, CommonClipboard.ImageFormat format) { }
+                public static Bitmap2D Load(string path) => new Bitmap2D();
+            }
+        }
+        CSHARP_EOF
+
+        cat > "${STUB_DIR}/Elements.Assets/Elements.Assets.csproj" << 'EOF'
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <TargetFramework>net10.0</TargetFramework>
+            <OutputType>Library</OutputType>
+            <AssemblyName>Elements.Assets</AssemblyName>
+          </PropertyGroup>
+        </Project>
+        EOF
+
+        dotnet build "${STUB_DIR}/Elements.Assets/Elements.Assets.csproj" -o "${OUTPUT_DIR}"
+
+        # Create Renderite.Host stub (proprietary Resonite assembly)
+        mkdir -p "${STUB_DIR}/Renderite.Host"
+        cat > "${STUB_DIR}/Renderite.Host/Renderite.Host.cs" << 'CSHARP_EOF'
+        using System;
+
+        namespace Renderite.Host {
+            public interface LinuxClipboardInterface {
+                string GetText();
+                void SetText(string text);
+                object GetImage();
+                void SetBitmap(object bitmap);
+            }
+        }
+        CSHARP_EOF
+
+        cat > "${STUB_DIR}/Renderite.Host/Renderite.Host.csproj" << 'EOF'
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <TargetFramework>net10.0</TargetFramework>
+            <OutputType>Library</OutputType>
+            <AssemblyName>Renderite.Host</AssemblyName>
+          </PropertyGroup>
+        </Project>
+        EOF
+
+        dotnet build "${STUB_DIR}/Renderite.Host/Renderite.Host.csproj" -o "${OUTPUT_DIR}"
+
+        echo "=== Assemblies ready ==="
+        find "${OUTPUT_DIR}" -name "*.dll" -type f
+
     - name: Restore dependencies
       run: dotnet restore LinuxClipboard.csproj /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
 
