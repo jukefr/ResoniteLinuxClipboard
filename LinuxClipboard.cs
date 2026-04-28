@@ -130,16 +130,16 @@ public class LinuxClipboard : ResoniteMod
 			return psi;
 		}
 
-		static string? MyGetImageMime()
+		static Renderite.Host.CommonClipboard.ImageFormat? MyGetImageMime()
 		{
 			var mimes = GetClipboardMimes();
-			var format = CommonClipboard.ImageFormats
+			var format = Renderite.Host.CommonClipboard.ImageFormats
 				.Where(f => mimes.Contains(f.OLE))
 				.FirstOrDefault();
-			// ImageFormat is a struct, so check if it's the default value
-			if (format.Equals(default(Elements.Assets.CommonClipboard.ImageFormat)))
+			// Check if it's the default value (no match) - OLE will be null for default
+			if (format.OLE == null)
 				return null;
-			return format.OLE;
+			return format;
 		}
 
 		static string GetExtensionFromMime(string mime)
@@ -238,7 +238,7 @@ public class LinuxClipboard : ResoniteMod
 		[HarmonyPatch(typeof(LinuxClipboardInterface), "GetImageMime")]
 		public static class Patch_GetImageMime
 		{
-			static bool Prefix(ref Elements.Assets.CommonClipboard.ImageFormat? __result)
+			static bool Prefix(ref Renderite.Host.CommonClipboard.ImageFormat? __result)
 			{
 				try
 				{
@@ -249,12 +249,7 @@ public class LinuxClipboard : ResoniteMod
 					}
 					else
 					{
-						__result = new Elements.Assets.CommonClipboard.ImageFormat
-						{
-							OLE = mime,
-							Extension = GetExtensionFromMime(mime),
-							MimeType = mime
-						};
+						__result = mime;
 					}
 				}
 				catch (Exception ex)
@@ -304,14 +299,15 @@ public class LinuxClipboard : ResoniteMod
 						return false;
 					}
 
-					var mime = MyGetImageMime();
-					if (mime == null)
+					var imageMime = MyGetImageMime();
+					if (imageMime == null)
 					{
 						__result = Task.FromException<Bitmap2D>(new InvalidOperationException("No image format available on clipboard"));
 						return false;
 					}
 
-					var psi = GetReadPSI(mime);
+					var mime = imageMime.Value;
+					var psi = GetReadPSI(mime.OLE);
 					var p = Process.Start(psi);
 					if (p == null)
 					{
@@ -329,8 +325,7 @@ public class LinuxClipboard : ResoniteMod
 
 						__result = Task.Run(delegate {
 							try {
-								var ext = GetExtensionFromMime(mime);
-								return Bitmap2D.Load(memstr, ext, true);
+								return Bitmap2D.Load(memstr, mime.Extension, true);
 							} finally {
 								memstr.Dispose();
 							}
