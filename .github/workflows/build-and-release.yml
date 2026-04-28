@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+      continue-on-error: true
+
+    - name: Setup .NET 10.0 (Preview fallback)
+      if: failure()
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.100-preview.7.24466.3'
+        dotnet-quality: 'preview'
+
+    - name: Restore dependencies
+      run: dotnet restore LinuxClipboard.csproj
+
+    - name: Build
+      run: dotnet build LinuxClipboard.csproj --configuration Release --no-restore
+
+    - name: Get version from csproj
+      id: get_version
+      run: |
+        VERSION=$(grep -oP '<Version>\K[^<]+' LinuxClipboard.csproj)
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ./bin/Release/net10.0/LinuxClipboard.dll
+        tag_name: v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
+        name: Release v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
+        body: |
+          Automated release from commit `${{ github.sha }}`
+
+          ## Changes
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload build artifacts (backup)
+      uses: actions/upload-artifact@v4
+      with:
+        name: LinuxClipboard.dll
+        path: ./bin/Release/net10.0/LinuxClipboard.dll
