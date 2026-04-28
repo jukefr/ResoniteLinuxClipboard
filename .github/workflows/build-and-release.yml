@@ -73,8 +73,8 @@ jobs:
       with:
         files: |
           ./bin/Release/net10.0/LinuxClipboard.dll
-        tag_name: v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
-        name: Release v${{ steps.get_version.outputs.VERSION }}-${{ github.run_number }}
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: Release v${{ steps.get_version.outputs.VERSION }}
         body: |
           Automated release from commit `${{ github.sha }}`
 
