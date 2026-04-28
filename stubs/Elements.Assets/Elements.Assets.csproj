@@ -3,6 +3,14 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>Elements.Assets</AssemblyName>
+
+    <!--
+      GitHub Actions / local builds sometimes hit an SDK bug during deps generation:
+      "GenerateDepsFile" fails with "An item with the same key has already been added. Key: Elements.Assets".
+      Since this stub is only used as compile-time reference, we don't need deps generation.
+    -->
+    <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Renderite.Host">

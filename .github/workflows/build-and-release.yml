@@ -50,11 +50,6 @@ jobs:
         echo "=== Downloaded DLLs ==="
         ls -la "${OUTPUT_DIR}/Libraries/" "${OUTPUT_DIR}/rml_libs/"
 
-    - name: Build proprietary stubs (Elements.Assets, Renderite.Host)
-      run: |
-        dotnet build stubs/Elements.Assets/Elements.Assets.csproj -o stubs/prebuilt
-        dotnet build stubs/Renderite.Host/Renderite.Host.csproj -o stubs/prebuilt
-
     - name: Restore dependencies
       run: dotnet restore LinuxClipboard.csproj /p:ResonitePath="${{ github.workspace }}/stubs/prebuilt"
 

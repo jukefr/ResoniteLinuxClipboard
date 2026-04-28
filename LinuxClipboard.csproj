@@ -28,7 +28,7 @@
 	<ItemGroup>
 		<ResoniteReference Include="Elements.Assets"/>
 		<ResoniteReference Include="Renderite.Host"/>
-
+			
 		<Reference Include="ResoniteModLoader">
 			<HintPath>$(ResonitePath)/Libraries/ResoniteModLoader.dll</HintPath>
 			<Private>false</Private>
@@ -38,6 +38,22 @@
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
+
+	<!--
+	  CI friendliness:
+	  Ensure stub assemblies exist so the action can run just `dotnet build LinuxClipboard.csproj`.
+	  This avoids relying on downloaded/prebuilt stub artifacts.
+	-->
+	<Target Name="BuildStubs" BeforeTargets="ResolveReferences">
+		<!-- Ensure stub assemblies exist when we rely on stub output for compilation. -->
+		<PropertyGroup>
+			<_StubOutDir>$(MSBuildProjectDirectory)/stubs/prebuilt</_StubOutDir>
+		</PropertyGroup>
+		<MakeDir Directories="$(_StubOutDir)" />
+		<!-- Don't overwrite open-source DLLs (ResoniteModLoader/Harmony) if they already exist. -->
+		<Exec Command='dotnet build "stubs/Elements.Assets/Elements.Assets.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
+		<Exec Command='dotnet build "stubs/Renderite.Host/Renderite.Host.csproj" -c $(Configuration) -o "$(_StubOutDir)"' />
+	</Target>
 
 	<ItemGroup>
 		<Reference Include="@(ResoniteReference)">
